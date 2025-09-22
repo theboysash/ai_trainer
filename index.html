@@ -1,11 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Pose Tracker</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Bicep Curl Counter (Web)</title>
+    <style>
+      body { margin:0; background:#0b0e13; color:#e9edf4; font-family: ui-sans-serif, system-ui; }
+      .wrap { max-width: 1080px; margin: 20px auto; padding: 0 16px; }
+      .row { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
+      video, canvas { width: 100%; max-width: 1080px; border-radius: 10px; }
+      button { background:#1b2a3a; color:#fff; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+      button:hover { background:#24384e; }
+      .badge { background:#162031; padding:6px 10px; border-radius:6px; font-size:14px; }
+      .spacer { height: 10px; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="wrap">
+      <h2>Bicep Curl Counter — Web (PCV/MCV per rep + session CSV)</h2>
+      <div class="row">
+        <button id="btnStart">Start Camera</button>
+        <button id="btnStop" disabled>Stop</button>
+        <button id="btnDownload" disabled>Download CSVs</button>
+        <span class="badge" id="status">idle</span>
+      </div>
+      <div class="spacer"></div>
+      <video id="video" playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="spacer"></div>
+      <div class="row">
+        <span class="badge" id="hudSet">Set #1</span>
+        <span class="badge" id="hudSetsDone">Sets: 0</span>
+        <span class="badge" id="hudReps">Reps: 0</span>
+        <span class="badge" id="hudAngle">Angle: —</span>
+        <span class="badge" id="hudVel">Vel: —</span>
+        <span class="badge" id="hudState">State: idle</span>
+        <span class="badge" id="hudClap">Clap dist: —</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
