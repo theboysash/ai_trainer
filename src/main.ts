@@ -1,7 +1,7 @@
 // src/main.ts
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { BicepCurlApp } from "./app";
-import "./vapiTest";
+
 
 
 const video = document.getElementById("video") as HTMLVideoElement;
