@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VelocityCoach AI - Multi-Exercise Trainer</title>
+    <style>
+      body { 
+        margin: 0; 
+        background: #0b0e13; 
+        color: #e9edf4; 
+        font-family: ui-sans-serif, system-ui; 
+        overflow-x: hidden;
+      }
+      .wrap { 
+        max-width: 1200px; 
+        margin: 20px auto; 
+        padding: 0 16px; 
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      .title {
+        background: linear-gradient(135deg, #50d7ff, #3b82f6);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0;
+      }
+      .workout-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+      
+      /* Exercise Selection Panel */
+      .exercise-panel {
+        background: #162031;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 1px solid #1e293b;
+      }
+      .exercise-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+      .exercise-card {
+        background: #1b2a3a;
+        border: 2px solid #2d3b4e;
+        border-radius: 10px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+      .exercise-card:hover {
+        border-color: #50d7ff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(80, 215, 255, 0.2);
+      }
+      .exercise-card.active {
+        border-color: #22c55e;
+        background: #1a2f1a;
+      }
+      .exercise-card.completed {
+        border-color: #10b981;
+        background: #0f2027;
+      }
+      .exercise-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #50d7ff;
+        margin-bottom: 8px;
+      }
+      .exercise-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 12px;
+      }
+      .exercise-progress {
+        background: #0f1419;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #2d3b4e;
+        border-radius: 2px;
+        margin: 8px 0;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #10b981);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+      
+      /* Workout Dashboard */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 25px;
+      }
+      .main-area {
+        display: flex;
+        flex-direction: column;
+      }
+      .video-container {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+      video, canvas { 
+        width: 100%; 
+        border-radius: 12px;
+        border: 2px solid #1e293b;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      }
+      
+      /* Sidebar Stats */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .stats-card {
+        background: #162031;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #1e293b;
+      }
+      .stats-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #50d7ff;
+        margin-bottom: 15px;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #1e293b;
+      }
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        font-size: 13px;
+        color: #64748b;
+      }
+      .stat-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e9edf4;
+      }
+      .stat-value.good { color: #22c55e; }
+      .stat-value.warning { color: #f59e0b; }
+      .stat-value.danger { color: #ef4444; }
+      
+      /* Rest Timer */
+      .rest-timer {
+        background: linear-gradient(135deg, #3b82f6, #1e40af);
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+        color: white;
+      }
+      .rest-timer.active {
+        animation: pulse-rest 2s infinite;
+      }
+      @keyframes pulse-rest {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+        50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+      }
+      .rest-time {
+        font-size: 48px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+      .rest-label {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+      
+      /* Control Buttons */
+      .control-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      button {
+        background: #1b2a3a;
+        color: #fff;
+        border: none;
+        padding: 12px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+        border: 1px solid #2d3b4e;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #24384e;
+        border-color: #3a4d63;
+        transform: translateY(-1px);
+      }
+      button:disabled {
+        background: #0f1419;
+        color: #64748b;
+        cursor: not-allowed;
+        transform: none;
+        border-color: #1e293b;
+      }
+      .btn-primary {
+        background: #3b82f6;
+        border-color: #2563eb;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+        border-color: #1d4ed8;
+      }
+      .btn-success {
+        background: #22c55e;
+        border-color: #16a34a;
+      }
+      .btn-success:hover {
+        background: #16a34a;
+        border-color: #15803d;
+      }
+      .btn-danger {
+        background: #ef4444;
+        border-color: #dc2626;
+      }
+      .btn-danger:hover {
+        background: #dc2626;
+        border-color: #b91c1c;
+      }
+      
+      /* Real-time Metrics Bar */
+      .metrics-bar {
+        background: rgba(22, 32, 49, 0.9);
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      .metric {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 80px;
+      }
+      .metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #50d7ff;
+      }
+      .metric-label {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+      
+      /* Voice Status Indicator */
+      .voice-status {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(34, 197, 94, 0.2);
+        border: 1px solid #22c55e;
+        color: #22c55e;
+        padding: 12px 16px;
+        border-radius: 25px;
+        font-size: 12px;
+        font-weight: 600;
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .voice-disabled {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: #ef4444;
+        color: #ef4444;
+      }
+      
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          order: -1;
+        }
+        .exercise-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/main-D82fZaG7.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- Header -->
+      <div class="header">
+        <h1 class="title">VelocityCoach AI</h1>
+        <div class="workout-controls">
+          <button id="btnStart" class="btn-primary">Start Workout</button>
+          <button id="btnStop" class="btn-danger" disabled>Stop Session</button>
+          <button id="btnExport" class="btn-success" disabled>Export Data</button>
+        </div>
+      </div>
+
+      <!-- Exercise Selection Panel -->
+      <div class="exercise-panel">
+        <h2 style="margin-top: 0; color: #e9edf4;">Select Exercise</h2>
+        <div class="exercise-grid" id="exerciseGrid">
+          <!-- Exercise cards will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Workout Dashboard -->
+      <div class="dashboard">
+        <div class="main-area">
+          <!-- Real-time Metrics -->
+          <div class="metrics-bar" id="metricsBar">
+            <div class="metric">
+              <div class="metric-value" id="metricReps">0</div>
+              <div class="metric-label">Reps</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricAngle">—°</div>
+              <div class="metric-label">Angle</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricVelocity">—</div>
+              <div class="metric-label">Velocity</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricForm">—</div>
+              <div class="metric-label">Form Score</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value" id="metricVL">—%</div>
+              <div class="metric-label">Velocity Loss</div>
+            </div>
+          </div>
+
+          <!-- Video Feed -->
+          <div class="video-container">
+            <video id="video" playsinline webkit-playsinline muted></video>
+            <canvas id="canvas"></canvas>
+          </div>
+
+          <!-- Manual Controls -->
+          <div class="control-buttons">
+            <button id="btnSkipRest">Skip Rest</button>
+            <button id="btnCompleteSet">Complete Set</button>
+            <button id="btnNextExercise">Next Exercise</button>
+            <button id="btnToggleVoice">Voice: ON</button>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <!-- Current Set Info -->
+          <div class="stats-card">
+            <div class="stats-title">Current Set</div>
+            <div class="stat-row">
+              <span class="stat-label">Exercise:</span>
+              <span class="stat-value" id="currentExercise">Shoulder Press</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Set:</span>
+              <span class="stat-value" id="currentSet">1 of 4</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Target Reps:</span>
+              <span class="stat-value" id="targetReps">8</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Status:</span>
+              <span class="stat-value" id="setStatus">Ready</span>
+            </div>
+          </div>
+
+          <!-- Rest Timer -->
+          <div class="rest-timer" id="restTimer" style="display: none;">
+            <div class="rest-time" id="restTime">0:00</div>
+            <div class="rest-label">Rest Remaining</div>
+          </div>
+
+          <!-- Session Stats -->
+          <div class="stats-card">
+            <div class="stats-title">Session Progress</div>
+            <div class="stat-row">
+              <span class="stat-label">Total Sets:</span>
+              <span class="stat-value" id="totalSets">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Total Reps:</span>
+              <span class="stat-value" id="totalReps">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Duration:</span>
+              <span class="stat-value" id="workoutDuration">0:00</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Est. Remaining:</span>
+              <span class="stat-value" id="estimatedTime">—</span>
+            </div>
+          </div>
+
+          <!-- Performance Stats -->
+          <div class="stats-card">
+            <div class="stats-title">Performance</div>
+            <div class="stat-row">
+              <span class="stat-label">Avg Form Score:</span>
+              <span class="stat-value good" id="avgFormScore">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Peak Velocity:</span>
+              <span class="stat-value" id="peakVelocity">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Consistency:</span>
+              <span class="stat-value good" id="consistency">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Status Indicator -->
+    <div id="voiceStatus" class="voice-status">
+      <span>🔊</span>
+      <span>Voice Coach Active</span>
+    </div>
+
+  </body>
+</html>
