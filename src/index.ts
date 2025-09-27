@@ -344,7 +344,7 @@ class VelocityCoachAI {
 
       // MediaPipe setup
       const fileset = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
       );
       this.landmarker = await PoseLandmarker.createFromOptions(fileset, {
         baseOptions: {

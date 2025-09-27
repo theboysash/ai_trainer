@@ -1,7 +1,5 @@
-// src/fitnessDatabase.ts - MongoDB Schema for Fitness Trainer
+// src/fitnessDatabase.ts - Fixed MongoDB Schema for Fitness Trainer
 import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
-
-// Remove the pymongo import - that's for Python, not TypeScript
 
 export type ExerciseType = 
   | 'squats' 
@@ -84,6 +82,20 @@ export interface Set {
   form_score?: number; // 0-100
   started_at: Date;
   completed_at: Date;
+}
+
+// FIXED: Export SetData interface for external use
+export interface SetData {
+  exercise: ExerciseType;
+  setNumber: number;
+  reps: number;
+  startTime: number;
+  endTime: number;
+  avgVelocity: number;
+  peakVelocity: number;
+  velocityLoss: number;
+  formScore: number;
+  restTime?: number;
 }
 
 // Individual reps within sets
@@ -371,7 +383,7 @@ export class FitnessDatabase {
 
 // Factory function to create database configuration
 export function createDatabaseConfig(): DatabaseConfig {
-  // Load environment variables
+  // Load environment variables (fallback to demo values)
   const isProduction = process.env.NODE_ENV === 'production';
   
   return {
@@ -384,5 +396,3 @@ export function createDatabaseConfig(): DatabaseConfig {
     }
   };
 }
-
-// Export types for use in other modules
