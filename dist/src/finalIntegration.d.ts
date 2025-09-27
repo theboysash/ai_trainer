@@ -1,0 +1,40 @@
+import { ExerciseType } from './exerciseSystem';
+export declare class VelocityCoachAI {
+    private landmarker?;
+    private voiceAgent;
+    private visualDashboard;
+    private exerciseDetectors;
+    private currentExercise;
+    private video;
+    private canvas;
+    private ctx;
+    private stream?;
+    private running;
+    private currentIntensity;
+    private velocityBaselines;
+    private exerciseVelocityHistory;
+    constructor();
+    private initializeAllDetectors;
+    private setupIntensityControls;
+    private setupEventHandlers;
+    start(): Promise<void>;
+    private loop;
+    private processCurrentExercise;
+    private getVLThreshold;
+    private trackVelocity;
+    private calculateVelocityLoss;
+    private calculateFormScore;
+    private updateAllSystems;
+    private updateMetricsDisplay;
+    private getDefaultStepData;
+    private switchExercise;
+    private drawPoseSkeleton;
+    private highlightActiveExercise;
+    private drawNoPersonMessage;
+    stop(): void;
+    private toggleVoice;
+    private updateUI;
+    getCurrentExercise(): ExerciseType;
+    destroy(): void;
+}
+//# sourceMappingURL=finalIntegration.d.ts.map
