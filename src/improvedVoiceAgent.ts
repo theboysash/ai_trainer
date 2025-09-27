@@ -1,4 +1,4 @@
-// src/improvedVoiceAgent.ts
+// src/improvedVoiceAgent.ts - Clean version without syntax errors
 import { VoiceMessage, WorkoutIntensity } from './voiceAgent';
 import { ExerciseType, SetData } from './exerciseSystem';
 import { getExerciseConfig } from './exerciseConfigs';
@@ -9,19 +9,30 @@ export class ImprovedVoiceAgent {
   private isEnabled: boolean = true;
   private messageQueue: VoiceMessage[] = [];
   private lastSpoken: number = 0;
-  private readonly MIN_SPEAK_INTERVAL = 8000; // Increased to 8 seconds
+  private readonly MIN_SPEAK_INTERVAL = 8000;
+  
+  // VBT intensity from your PDF model
+  private intensityThresholds = {
+    light: 0.20,    // 15-20% VL threshold
+    moderate: 0.25, // 20-25% VL threshold  
+    intense: 0.40   // 30-40% VL threshold
+  };
+
+  private currentIntensity: 'light' | 'moderate' | 'intense' = 'moderate';
   
   // Smarter message throttling
-  private messageHistory: Map<string, number> = new Map(); // Track when we last said each message type
+  private messageHistory: Map<string, number> = new Map();
   private readonly MESSAGE_COOLDOWNS = {
-    'form_correction': 15000,     // 15 seconds between form tips
-    'velocity_warning': 20000,    // 20 seconds between VL warnings
-    'encouragement': 12000,       // 12 seconds between motivational messages
-    'set_complete': 5000,         // 5 seconds (always allow set completion)
-    'exercise_start': 3000        // 3 seconds (always allow exercise transitions)
+    'form_correction': 15000,
+    'velocity_warning': 20000,
+    'encouragement': 12000,
+    'set_complete': 5000,
+    'exercise_start': 3000,
+    'intensity_update': 2000,
+    'weight_adjustment': 5000
   };
   
-  // Exercise-specific tracking with better isolation
+  // Exercise-specific tracking
   private currentExercise: ExerciseType = 'shoulder_press';
   private exerciseData: Map<ExerciseType, {
     velocityHistory: number[];
@@ -31,12 +42,12 @@ export class ImprovedVoiceAgent {
     repCount: number;
   }> = new Map();
   
-  // Priority message system - only speak the most important things
+  // Priority message system
   private readonly MESSAGE_PRIORITIES = {
-    'safety_critical': 1,    // Injury prevention, immediate stops
-    'set_milestone': 2,      // Set completions, exercise changes
-    'performance': 3,        // VL warnings, form tips
-    'motivation': 4          // Encouragement, general tips
+    'safety_critical': 1,
+    'set_milestone': 2,
+    'performance': 3,
+    'motivation': 4
   };
 
   constructor() {
@@ -77,7 +88,6 @@ export class ImprovedVoiceAgent {
   private startMessageProcessor() {
     setInterval(() => {
       if (this.messageQueue.length > 0 && Date.now() - this.lastSpoken > this.MIN_SPEAK_INTERVAL) {
-        // Sort by priority (lower number = higher priority)
         this.messageQueue.sort((a: VoiceMessage, b: VoiceMessage) => {
           const priorityA = this.getMessagePriority(a);
           const priorityB = this.getMessagePriority(b);
@@ -103,33 +113,69 @@ export class ImprovedVoiceAgent {
     return this.MESSAGE_PRIORITIES.motivation;
   }
 
-  // Main analysis - now with better exercise isolation
+  // ADDED: Missing updateIntensity method
+  updateIntensity(intensity: 'light' | 'moderate' | 'intense'): void {
+    this.currentIntensity = intensity;
+    
+    const thresholds = {
+      light: '15-20%',
+      moderate: '20-25%', 
+      intense: '30-40%'
+    };
+    
+    this.queueMessage({
+      type: 'instruction',
+      message: `Training intensity set to ${intensity}. Target velocity loss threshold: ${thresholds[intensity]}.`,
+      priority: 'high',
+      timestamp: Date.now(),
+      category: 'intensity_update'
+    });
+  }
+
+  // ADDED: Missing onExerciseStart method  
+  onExerciseStart(exercise: ExerciseType): void {
+    const config = getExerciseConfig(exercise);
+    
+    this.queueMessage({
+      type: 'instruction', 
+      message: `Starting ${config.name}. ${config.voiceCues.formTips[0]}`,
+      priority: 'medium',
+      timestamp: Date.now(),
+      category: 'exercise_start'
+    });
+    
+    // Reset exercise-specific data
+    const exerciseDataToReset = this.exerciseData.get(exercise);
+    if (exerciseDataToReset) {
+      exerciseDataToReset.velocityHistory = [];
+      exerciseDataToReset.baseline = null;
+      exerciseDataToReset.repCount = 0;
+    }
+  }
+
+  // Main analysis method
   analyzeWorkoutStep(stepData: any): void {
-    // Only update data for the current exercise
     if (stepData.exercise !== this.currentExercise) {
       this.currentExercise = stepData.exercise;
       this.onExerciseSwitch(stepData.exercise);
     }
 
-    const exerciseData = this.exerciseData.get(this.currentExercise)!;
+    const exerciseData = this.exerciseData.get(this.currentExercise);
+    if (!exerciseData) return;
     
-    // Handle rest periods (minimal voice during rest)
     if (stepData.isResting) {
       this.handleRestPeriod(stepData);
       return;
     }
 
-    // Track velocity only for current exercise
     if (stepData.velocity !== 0) {
       this.trackExerciseVelocity(this.currentExercise, Math.abs(stepData.velocity));
     }
 
-    // Critical analysis only during active movement
     if (stepData.state !== 'idle' && stepData.reps > 0) {
       this.checkCriticalIssues(stepData, exerciseData);
     }
 
-    // Rep milestone feedback (less frequent)
     if (stepData.isNewRep && stepData.reps !== exerciseData.repCount) {
       exerciseData.repCount = stepData.reps;
       this.handleRepMilestone(stepData);
@@ -137,7 +183,6 @@ export class ImprovedVoiceAgent {
   }
 
   private onExerciseSwitch(exercise: ExerciseType): void {
-    // Only announce exercise switches, not every analysis
     const config = getExerciseConfig(exercise);
     
     this.queueMessage({
@@ -150,29 +195,27 @@ export class ImprovedVoiceAgent {
   }
 
   private trackExerciseVelocity(exercise: ExerciseType, velocity: number): void {
-    const data = this.exerciseData.get(exercise)!;
-    data.velocityHistory.push(velocity);
+    const exerciseDataToTrack = this.exerciseData.get(exercise);
+    if (!exerciseDataToTrack) return;
     
-    // Set baseline from first few movements
-    if (!data.baseline && data.velocityHistory.length >= 4) {
-      data.baseline = data.velocityHistory.slice(0, 4).reduce((a, b) => a + b) / 4;
+    exerciseDataToTrack.velocityHistory.push(velocity);
+    
+    if (!exerciseDataToTrack.baseline && exerciseDataToTrack.velocityHistory.length >= 4) {
+      exerciseDataToTrack.baseline = exerciseDataToTrack.velocityHistory.slice(0, 4).reduce((a, b) => a + b) / 4;
     }
     
-    // Keep history reasonable
-    if (data.velocityHistory.length > 15) {
-      data.velocityHistory = data.velocityHistory.slice(-12);
+    if (exerciseDataToTrack.velocityHistory.length > 15) {
+      exerciseDataToTrack.velocityHistory = exerciseDataToTrack.velocityHistory.slice(-12);
     }
   }
 
   private checkCriticalIssues(stepData: any, exerciseData: any): void {
     const now = Date.now();
     
-    // Only check velocity loss if we have enough data
     if (exerciseData.baseline && exerciseData.velocityHistory.length >= 6) {
       this.checkVelocityLoss(stepData, exerciseData, now);
     }
     
-    // Form check with much longer cooldown
     if (now - exerciseData.lastFormWarning > this.MESSAGE_COOLDOWNS.form_correction) {
       this.checkFormQuality(stepData, exerciseData, now);
     }
@@ -185,17 +228,11 @@ export class ImprovedVoiceAgent {
 
     const recent = exerciseData.velocityHistory.slice(-4);
     const currentAvg = recent.reduce((a: number, b: number) => a + b, 0) / recent.length;
-    this.messageQueue.sort((a: VoiceMessage, b: VoiceMessage) => {
-          const priorityA = this.getMessagePriority(a);
-          const priorityB = this.getMessagePriority(b);
-          return priorityA - priorityB;
-        });
     const velocityLoss = (exerciseData.baseline - currentAvg) / exerciseData.baseline;
     
     const threshold = this.getVLThreshold(stepData.exercise);
     
-    // Only warn on critical velocity loss
-    if (velocityLoss >= threshold + 0.05) { // 5% buffer above threshold
+    if (velocityLoss >= threshold + 0.05) {
       this.queueMessage({
         type: 'warning',
         message: this.getVLWarningMessage(stepData.exercise, velocityLoss, threshold),
@@ -208,7 +245,6 @@ export class ImprovedVoiceAgent {
   }
 
   private checkFormQuality(stepData: any, exerciseData: any, now: number): void {
-    // Only warn on really poor form scores
     if (stepData.formScore < 60) {
       const config = getExerciseConfig(stepData.exercise);
       const warnings = config.voiceCues.warnings;
@@ -226,7 +262,6 @@ export class ImprovedVoiceAgent {
   }
 
   private handleRepMilestone(stepData: any): void {
-    // Only celebrate significant milestones
     if (stepData.reps === Math.floor(stepData.targetReps / 2) || stepData.reps === stepData.targetReps) {
       const now = Date.now();
       if (now - (this.messageHistory.get('encouragement') || 0) > this.MESSAGE_COOLDOWNS.encouragement) {
@@ -243,7 +278,6 @@ export class ImprovedVoiceAgent {
   }
 
   private handleRestPeriod(stepData: any): void {
-    // Very minimal rest period coaching
     if (stepData.restTimeRemaining === 10) {
       this.queueMessage({
         type: 'instruction',
@@ -256,29 +290,49 @@ export class ImprovedVoiceAgent {
   }
 
   private getVLThreshold(exercise: ExerciseType): number {
-    const thresholds = {
-      shoulder_press: 0.30,    // Higher threshold for compound movement
-      lateral_raise: 0.25,     
-      front_raise: 0.25,
-      rear_delt_fly: 0.22,     
-      bicep_curl: 0.28
+    const baseThreshold = this.intensityThresholds[this.currentIntensity];
+    
+    const exerciseModifiers = {
+      shoulder_press: 1.0,
+      lateral_raise: 0.85,
+      front_raise: 0.85,
+      rear_delt_fly: 0.75,
+      bicep_curl: 0.9
     };
     
-    return thresholds[exercise] || 0.25;
+    const modifier = exerciseModifiers[exercise] || 1.0;
+    return baseThreshold * modifier;
   }
 
   private getVLWarningMessage(exercise: ExerciseType, vl: number, threshold: number): string {
     const exerciseName = getExerciseConfig(exercise).name;
     const vlPercent = Math.round(vl * 100);
+    const thresholdPercent = Math.round(threshold * 100);
     
-    if (vl >= 0.40) {
-      return `Stop the ${exerciseName} set. That's enough.`;
+    if (vl >= 0.40 || (this.currentIntensity === 'intense' && vl >= 0.35)) {
+      return `Stop the ${exerciseName} set immediately! Velocity loss at ${vlPercent}% exceeds your ${thresholdPercent}% limit.`;
+    } else if (vl >= threshold) {
+      return `Velocity loss reached ${vlPercent}% on ${exerciseName}. Your ${thresholdPercent}% threshold exceeded. Consider ending this set.`;
     } else {
-      return `Velocity dropping on ${exerciseName}. Consider wrapping up.`;
+      return `Velocity dropping to ${vlPercent}% on ${exerciseName}. Approaching your ${thresholdPercent}% threshold.`;
     }
   }
 
-  // Simplified public methods
+  private getWeightAdjustmentRecommendation(exercise: ExerciseType, setVL: number): string | null {
+    const threshold = this.getVLThreshold(exercise);
+    const tolerance = 0.05;
+    
+    if (setVL < threshold - tolerance) {
+      return `Set velocity loss was only ${Math.round(setVL * 100)}%. Consider adding 2.5-5% more weight next set to reach your ${Math.round(threshold * 100)}% target zone.`;
+    } 
+    else if (setVL > threshold + tolerance) {
+      return `High velocity loss at ${Math.round(setVL * 100)}%. Consider reducing weight by 2.5-5% next set to stay in your ${Math.round(threshold * 100)}% target zone.`;
+    }
+    
+    return `Perfect velocity loss at ${Math.round(setVL * 100)}%. Right in your target training zone.`;
+  }
+
+  // Public methods
   onSetComplete(exercise: ExerciseType, setData: SetData): void {
     const config = getExerciseConfig(exercise);
     
@@ -290,11 +344,32 @@ export class ImprovedVoiceAgent {
       category: 'set_complete'
     });
     
+    // Add weight adjustment recommendation
+    const exerciseDataForAdjustment = this.exerciseData.get(exercise);
+    if (exerciseDataForAdjustment && exerciseDataForAdjustment.baseline && exerciseDataForAdjustment.velocityHistory.length >= 4) {
+      const setVL = setData.velocityLoss || 0;
+      const adjustment = this.getWeightAdjustmentRecommendation(exercise, setVL);
+      
+      if (adjustment) {
+        setTimeout(() => {
+          this.queueMessage({
+            type: 'instruction',
+            message: adjustment,
+            priority: 'low',
+            timestamp: Date.now(),
+            category: 'weight_adjustment'
+          });
+        }, 3000);
+      }
+    }
+    
     // Reset exercise data for next set
-    const data = this.exerciseData.get(exercise)!;
-    data.velocityHistory = [];
-    data.baseline = null;
-    data.repCount = 0;
+    const exerciseDataForReset = this.exerciseData.get(exercise);
+    if (exerciseDataForReset) {
+      exerciseDataForReset.velocityHistory = [];
+      exerciseDataForReset.baseline = null;
+      exerciseDataForReset.repCount = 0;
+    }
   }
 
   onExerciseComplete(exercise: ExerciseType): void {
@@ -320,15 +395,13 @@ export class ImprovedVoiceAgent {
   }
 
   private queueMessage(message: VoiceMessage & { category: string }): void {
-    // Check message-specific cooldown
     const lastTime = this.messageHistory.get(message.category) || 0;
     const cooldown = this.MESSAGE_COOLDOWNS[message.category as keyof typeof this.MESSAGE_COOLDOWNS] || 10000;
     
     if (Date.now() - lastTime < cooldown) {
-      return; // Skip this message
+      return;
     }
     
-    // Avoid duplicate messages
     if (this.messageQueue.some(m => m.message === message.message)) {
       return;
     }
@@ -336,7 +409,6 @@ export class ImprovedVoiceAgent {
     this.messageQueue.push(message);
     this.messageHistory.set(message.category, Date.now());
     
-    // Keep queue small - only most important messages
     if (this.messageQueue.length > 3) {
       this.messageQueue = this.messageQueue.slice(-3);
     }
@@ -371,6 +443,8 @@ export class ImprovedVoiceAgent {
       enabled: this.isEnabled,
       currentExercise: this.currentExercise,
       queueLength: this.messageQueue.length,
+      intensity: this.currentIntensity,
+      vlThreshold: this.intensityThresholds[this.currentIntensity],
       lastSpoken: Date.now() - this.lastSpoken
     };
   }

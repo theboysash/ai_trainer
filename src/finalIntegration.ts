@@ -1,18 +1,19 @@
-// src/finalIntegration.ts
+// src/fixedFinalIntegration.ts - DASHBOARD INTEGRATION FIX
 import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
 import { ExerciseType } from './exerciseSystem';
 import { ImprovedVoiceAgent } from './improvedVoiceAgent';
 import { EnhancedVisualDashboard } from './enhancedVisualDashboard';
 import { ImprovedLateralRaiseDetector } from './improvedLateralRaiseDetection';
+import { ExerciseDetector } from './exerciseSystem';
+import { getExerciseConfig } from './exerciseConfigs';
 
-// Main Application Class
 export class VelocityCoachAI {
   // Core components
   private landmarker?: PoseLandmarker;
   private voiceAgent = new ImprovedVoiceAgent();
-  private visualDashboard = new EnhancedVisualDashboard();
+  private visualDashboard = new EnhancedVisualDashboard(); // FIXED: Properly instantiate
   
-  // Exercise-specific detectors
+  // Exercise-specific detectors - FIXED: Initialize all exercises
   private exerciseDetectors = new Map<ExerciseType, any>();
   private currentExercise: ExerciseType = 'shoulder_press';
   
@@ -23,27 +24,65 @@ export class VelocityCoachAI {
   private stream?: MediaStream;
   private running = false;
 
+  // VBT Tracking - FIXED: Add your intensity system
+  private currentIntensity: 'light' | 'moderate' | 'intense' = 'moderate';
+  private velocityBaselines = new Map<ExerciseType, number>();
+  private exerciseVelocityHistory = new Map<ExerciseType, number[]>();
+
   constructor() {
-    // Initialize DOM elements
     this.video = document.getElementById("video") as HTMLVideoElement;
     this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
     this.ctx = this.canvas.getContext("2d")!;
     
-    // Initialize exercise-specific detectors
-    this.initializeDetectors();
+    this.initializeAllDetectors(); // FIXED: Initialize all exercise detectors
     this.setupEventHandlers();
+    this.setupIntensityControls(); // FIXED: Add your VBT intensity controls
   }
 
-  private initializeDetectors(): void {
-    // Use improved lateral raise detector for lateral raise
-    this.exerciseDetectors.set('lateral_raise', new ImprovedLateralRaiseDetector());
+  // FIXED: Initialize detectors for all exercises
+  private initializeAllDetectors(): void {
+    const exercises: ExerciseType[] = ['shoulder_press', 'lateral_raise', 'front_raise', 'rear_delt_fly', 'bicep_curl'];
     
-    // Use standard exercise detector for others (from previous exerciseSystem.ts)
-    // This would be expanded with specific detectors for each exercise
+    exercises.forEach(exercise => {
+      if (exercise === 'lateral_raise') {
+        // Use your improved lateral raise detector
+        this.exerciseDetectors.set(exercise, new ImprovedLateralRaiseDetector());
+      } else {
+        // Use standard exercise detector for others
+        const config = getExerciseConfig(exercise);
+        this.exerciseDetectors.set(exercise, new ExerciseDetector(config));
+      }
+      
+      // Initialize VBT tracking
+      this.exerciseVelocityHistory.set(exercise, []);
+    });
+  }
+
+  // FIXED: Add intensity controls from your PDF model
+  private setupIntensityControls(): void {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <div style="background: #162031; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <h4 style="color: #50d7ff; margin: 0 0 10px 0;">Velocity-Based Training</h4>
+        <select id="intensitySelect" style="background: #1b2a3a; color: white; border: 1px solid #2d3b4e; padding: 8px; border-radius: 4px;">
+          <option value="light">Light (40-60% 1RM, VL 15-20%)</option>
+          <option value="moderate" selected>Moderate (65-75% 1RM, VL 20-25%)</option>
+          <option value="intense">Intense (80-90% 1RM, VL 30-40%)</option>
+        </select>
+      </div>
+    `;
+    
+    const sidebar = document.querySelector('.sidebar') || document.body;
+    sidebar.insertBefore(container, sidebar.firstChild);
+    
+    document.getElementById('intensitySelect')!.addEventListener('change', (e) => {
+      this.currentIntensity = (e.target as HTMLSelectElement).value as any;
+      this.voiceAgent.updateIntensity(this.currentIntensity); // Pass to voice agent
+    });
   }
 
   private setupEventHandlers(): void {
-    // Exercise selection
+    // Exercise selection with proper detector switching
     document.querySelectorAll('.exercise-card').forEach(card => {
       card.addEventListener('click', () => {
         const exerciseType = (card as HTMLElement).dataset.exercise as ExerciseType;
@@ -53,17 +92,14 @@ export class VelocityCoachAI {
       });
     });
 
-    // Control buttons
     document.getElementById('btnStart')?.addEventListener('click', () => this.start());
     document.getElementById('btnStop')?.addEventListener('click', () => this.stop());
     document.getElementById('btnToggleVoice')?.addEventListener('click', () => this.toggleVoice());
-    document.getElementById('btnSkipRest')?.addEventListener('click', () => this.skipRest());
-    document.getElementById('btnCompleteSet')?.addEventListener('click', () => this.completeCurrentSet());
   }
 
   async start(): Promise<void> {
     try {
-      // Initialize camera
+      // Camera initialization
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user" },
         audio: false
@@ -71,14 +107,13 @@ export class VelocityCoachAI {
       this.video.srcObject = this.stream;
       await this.video.play();
 
-      // Initialize MediaPipe
+      // MediaPipe initialization
       const fileset = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
       );
       this.landmarker = await PoseLandmarker.createFromOptions(fileset, {
         baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
         },
         runningMode: "VIDEO",
         numPoses: 1,
@@ -96,19 +131,6 @@ export class VelocityCoachAI {
     }
   }
 
-  stop(): void {
-    this.running = false;
-    
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
-      this.stream = undefined;
-    }
-    
-    this.landmarker = undefined;
-    this.voiceAgent.clearQueue();
-    this.updateUI('stopped');
-  }
-
   private loop(): void {
     if (!this.running || !this.landmarker) return;
 
@@ -120,10 +142,8 @@ export class VelocityCoachAI {
     const nowMs = performance.now();
     const result = this.landmarker.detectForVideo(this.video, nowMs);
 
-    // Clear canvas
+    // Clear and draw video
     this.ctx.clearRect(0, 0, w, h);
-    
-    // Draw video frame
     try {
       this.ctx.drawImage(this.video, 0, 0, w, h);
     } catch {}
@@ -134,18 +154,16 @@ export class VelocityCoachAI {
       // Draw pose skeleton
       this.drawPoseSkeleton(landmarks, w, h);
       
-      // Process current exercise
+      // FIXED: Process current exercise with proper detector
       const stepData = this.processCurrentExercise(landmarks, nowMs / 1000);
       
-      // Update systems
-      this.voiceAgent.analyzeWorkoutStep(stepData);
-      this.visualDashboard.updateDashboard(stepData);
+      // FIXED: Update all systems with enhanced data
+      this.updateAllSystems(stepData);
       
       // Highlight active exercise joints
       this.highlightActiveExercise(landmarks, w, h);
       
     } else {
-      // No person detected
       this.drawNoPersonMessage();
     }
 
@@ -154,34 +172,72 @@ export class VelocityCoachAI {
     }
   }
 
+  // FIXED: Proper exercise processing with VBT integration
   private processCurrentExercise(landmarks: any[], timestamp: number): any {
     const detector = this.exerciseDetectors.get(this.currentExercise);
     
-    if (detector) {
-      const result = detector.step(landmarks, timestamp);
-      
-      // Enhance step data with additional metrics
-      return {
-        ...result,
-        exercise: this.currentExercise,
-        timestamp,
-        // Add form quality calculations
-        formScore: this.calculateFormScore(result, landmarks),
-        // Add velocity loss if detector supports it
-        velocityLoss: detector.getCurrentVelocityLoss ? detector.getCurrentVelocityLoss() : 0
-      };
+    if (!detector) {
+      return this.getDefaultStepData();
+    }
+
+    const result = detector.step(landmarks, timestamp);
+    
+    // FIXED: Add VBT calculations
+    const enhancedData = {
+      ...result,
+      exercise: this.currentExercise,
+      timestamp,
+      formScore: this.calculateFormScore(result, landmarks),
+      velocityLoss: this.calculateVelocityLoss(result.velocity),
+      intensityZone: this.currentIntensity,
+      vlThreshold: this.getVLThreshold(),
+      isResting: false, // You can enhance this based on rest logic
+      restTimeRemaining: 0
+    };
+
+    // Track velocity for baseline
+    this.trackVelocity(result.velocity);
+
+    return enhancedData;
+  }
+
+  // FIXED: VBT calculations from your PDF
+  private getVLThreshold(): number {
+    const thresholds = {
+      light: 0.20,    // 15-20%
+      moderate: 0.25, // 20-25%
+      intense: 0.40   // 30-40%
+    };
+    return thresholds[this.currentIntensity];
+  }
+
+  private trackVelocity(velocity: number): void {
+    if (velocity === 0) return;
+    
+    const history = this.exerciseVelocityHistory.get(this.currentExercise)!;
+    history.push(Math.abs(velocity));
+    
+    // Set baseline from first few reps
+    if (!this.velocityBaselines.has(this.currentExercise) && history.length >= 3) {
+      const baseline = history.slice(0, 3).reduce((a, b) => a + b) / 3;
+      this.velocityBaselines.set(this.currentExercise, baseline);
     }
     
-    return {
-      exercise: this.currentExercise,
-      reps: 0,
-      angle: 0,
-      velocity: 0,
-      state: 'idle',
-      formScore: 0,
-      isNewRep: false,
-      timestamp
-    };
+    // Keep history manageable
+    if (history.length > 20) {
+      history.splice(0, history.length - 15);
+    }
+  }
+
+  private calculateVelocityLoss(currentVelocity: number): number {
+    const baseline = this.velocityBaselines.get(this.currentExercise);
+    if (!baseline || currentVelocity === 0) return 0;
+    
+    const history = this.exerciseVelocityHistory.get(this.currentExercise)!;
+    if (history.length < 5) return 0;
+    
+    const recentAvg = history.slice(-3).reduce((a, b) => a + b) / 3;
+    return Math.max(0, (baseline - recentAvg) / baseline);
   }
 
   private calculateFormScore(result: any, landmarks: any[]): number {
@@ -190,22 +246,92 @@ export class VelocityCoachAI {
     
     switch (this.currentExercise) {
       case 'lateral_raise':
-        // Check for common lateral raise form issues
-        if (Math.abs(result.velocity) > 150) score -= 20; // Too fast
+        if (Math.abs(result.velocity) > 120) score -= 20; // Too fast
         if (result.angle > 90) score -= 15; // Too high
         break;
-        
       case 'shoulder_press':
-        // Shoulder press form checks
         if (Math.abs(result.velocity) > 180) score -= 20;
         break;
-        
-      // Add other exercises...
     }
     
     return Math.max(0, Math.min(100, score));
   }
 
+  // FIXED: Update all systems properly
+  private updateAllSystems(stepData: any): void {
+    // Voice agent analysis
+    this.voiceAgent.analyzeWorkoutStep(stepData);
+    
+    // FIXED: Dashboard update with proper data structure
+    this.visualDashboard.updateDashboard(stepData);
+    
+    // Update UI elements if they exist
+    this.updateMetricsDisplay(stepData);
+  }
+
+  private updateMetricsDisplay(stepData: any): void {
+    // Update metrics if elements exist
+    const elements = {
+      reps: document.getElementById('metricReps'),
+      angle: document.getElementById('metricAngle'),
+      velocity: document.getElementById('metricVelocity'),
+      form: document.getElementById('metricForm'),
+      vl: document.getElementById('metricVL')
+    };
+
+    if (elements.reps) elements.reps.textContent = stepData.reps.toString();
+    if (elements.angle) elements.angle.textContent = `${Math.round(stepData.angle)}°`;
+    if (elements.velocity) elements.velocity.textContent = stepData.velocity !== 0 ? `${Math.round(stepData.velocity)}°/s` : '—';
+    if (elements.form) elements.form.textContent = Math.round(stepData.formScore).toString();
+    if (elements.vl) {
+      const vlPercent = Math.round(stepData.velocityLoss * 100);
+      elements.vl.textContent = `${vlPercent}%`;
+      
+      // Color coding based on your thresholds
+      const threshold = this.getVLThreshold();
+      if (stepData.velocityLoss > threshold) {
+        elements.vl.style.color = '#ef4444'; // Red
+      } else if (stepData.velocityLoss > threshold * 0.8) {
+        elements.vl.style.color = '#f59e0b'; // Yellow
+      } else {
+        elements.vl.style.color = '#22c55e'; // Green
+      }
+    }
+  }
+
+  private getDefaultStepData(): any {
+    return {
+      exercise: this.currentExercise,
+      reps: 0,
+      angle: 0,
+      velocity: 0,
+      state: 'idle',
+      formScore: 0,
+      isNewRep: false,
+      timestamp: performance.now() / 1000,
+      velocityLoss: 0,
+      intensityZone: this.currentIntensity,
+      vlThreshold: this.getVLThreshold()
+    };
+  }
+
+  private switchExercise(exerciseType: ExerciseType): void {
+    if (this.currentExercise !== exerciseType) {
+      this.currentExercise = exerciseType;
+      
+      // Reset detector for new exercise
+      const detector = this.exerciseDetectors.get(exerciseType);
+      if (detector && detector.reset) {
+        detector.reset();
+      }
+      
+      // Notify systems
+      this.visualDashboard.onExerciseSwitch(exerciseType);
+      this.voiceAgent.onExerciseStart?.(exerciseType);
+    }
+  }
+
+  // Rest of your existing methods...
   private drawPoseSkeleton(landmarks: any[], w: number, h: number): void {
     const connections = [
       [11, 12], [11, 23], [12, 24], [23, 24], // torso
@@ -213,7 +339,6 @@ export class VelocityCoachAI {
       [23, 25], [25, 27], [24, 26], [26, 28], // legs
     ];
 
-    // Draw connections
     this.ctx.lineWidth = 3;
     this.ctx.strokeStyle = "rgba(0, 200, 255, 0.7)";
     this.ctx.beginPath();
@@ -228,7 +353,6 @@ export class VelocityCoachAI {
     });
     this.ctx.stroke();
 
-    // Draw joints
     this.ctx.fillStyle = "rgba(255, 180, 0, 0.8)";
     landmarks.forEach((point: any) => {
       this.ctx.beginPath();
@@ -239,11 +363,11 @@ export class VelocityCoachAI {
 
   private highlightActiveExercise(landmarks: any[], w: number, h: number): void {
     const jointMappings: Record<ExerciseType, number[]> = {
-      shoulder_press: [12, 14, 16], // Right arm
-      lateral_raise: [12, 14],      // Right shoulder-elbow
+      shoulder_press: [12, 14, 16],
+      lateral_raise: [12, 14],
       front_raise: [12, 14],
       rear_delt_fly: [12, 14],
-      bicep_curl: [12, 14, 16]      // Added bicep_curl
+      bicep_curl: [12, 14, 16]
     };
     
     const joints = jointMappings[this.currentExercise] || [];
@@ -275,17 +399,17 @@ export class VelocityCoachAI {
     this.ctx.textAlign = "left";
   }
 
-  private switchExercise(exerciseType: ExerciseType): void {
-    if (this.currentExercise !== exerciseType) {
-      this.currentExercise = exerciseType;
-      this.visualDashboard.onExerciseSwitch(exerciseType);
-      
-      // Reset the detector for the new exercise
-      const detector = this.exerciseDetectors.get(exerciseType);
-      if (detector && detector.reset) {
-        detector.reset();
-      }
+  stop(): void {
+    this.running = false;
+    
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = undefined;
     }
+    
+    this.landmarker = undefined;
+    this.voiceAgent.clearQueue();
+    this.updateUI('stopped');
   }
 
   private toggleVoice(): void {
@@ -294,30 +418,6 @@ export class VelocityCoachAI {
     if (btn) {
       btn.textContent = enabled ? 'Voice: ON' : 'Voice: OFF';
     }
-  }
-
-  private skipRest(): void {
-    const tracker = this.visualDashboard.getProgressTracker();
-    tracker.skipRest(this.currentExercise);
-  }
-
-  private completeCurrentSet(): void {
-    // Force complete the current set
-    const tracker = this.visualDashboard.getProgressTracker();
-    const mockSetData = {
-      exercise: this.currentExercise,
-      setNumber: tracker.getCurrentExerciseProgress()?.currentSet || 1,
-      reps: tracker.getCurrentExerciseProgress()?.targetReps || 8,
-      startTime: Date.now() / 1000 - 60,
-      endTime: Date.now() / 1000,
-      avgVelocity: 100,
-      peakVelocity: 150,
-      velocityLoss: 0.15,
-      formScore: 85
-    };
-    
-    this.visualDashboard.onSetComplete(this.currentExercise, mockSetData);
-    this.voiceAgent.onSetComplete(this.currentExercise, mockSetData);
   }
 
   private updateUI(state: 'running' | 'stopped' | 'error'): void {
@@ -335,29 +435,18 @@ export class VelocityCoachAI {
     }
   }
 
-  // Public API for testing
   getCurrentExercise(): ExerciseType {
     return this.currentExercise;
   }
 
-  getVoiceStatus(): any {
-    return this.voiceAgent.getStatus();
-  }
-
-  // Cleanup
   destroy(): void {
     this.stop();
     this.visualDashboard.reset();
   }
 }
 
-// Initialize the application when DOM is ready
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   const app = new VelocityCoachAI();
-  
-  // Make available for browser console testing
   (window as any).velocityCoachAI = app;
 });
-
-// Export for module usage
-export default VelocityCoachAI;
