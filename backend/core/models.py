@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
 
+
 # ---------- Master data ----------
 
 class Exercise(models.Model):
@@ -51,21 +52,29 @@ class SessionExercise(models.Model):
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
     order_index = models.PositiveIntegerField(default=1)
 
-    # Snapshot metrics/notes for this exercise on this day
+    # Snapshot metrics/notes
     predicted_1rm = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
     notes = models.TextField(blank=True)
 
-    # ---- Coaching targets (optional but useful) ----
-    # light / moderate / intense
+    # Coaching targets
     target_zone = models.CharField(max_length=16, blank=True)
     target_velocity_min = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
     target_velocity_max = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
-    target_vl_min = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # e.g., 0.20
-    target_vl_max = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # e.g., 0.25
+    target_vl_min = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    target_vl_max = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
     planned_sets_min = models.PositiveIntegerField(null=True, blank=True)
     planned_sets_max = models.PositiveIntegerField(null=True, blank=True)
     planned_reps_min = models.PositiveIntegerField(null=True, blank=True)
     planned_reps_max = models.PositiveIntegerField(null=True, blank=True)
+    target_percent_1rm_min = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    target_percent_1rm_max = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+
+    # Progress tracking
+    completed_sets_count = models.PositiveIntegerField(default=0)
+    total_reps_completed = models.PositiveIntegerField(default=0)
+    last_set_avg_velocity = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    last_set_velocity_loss_pct = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    last_stop_reason = models.CharField(max_length=32, blank=True)
 
     class Meta:
         ordering = ["order_index", "id"]
@@ -89,12 +98,11 @@ class Set(models.Model):
         SessionExercise, on_delete=models.CASCADE, related_name="sets"
     )
     set_number = models.PositiveIntegerField()
-    weight = models.FloatField(validators=[MinValueValidator(0.0)])  # kg
+    weight = models.FloatField(validators=[MinValueValidator(0.0)])
     reps = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
-    # Aggregates (recomputed from reps)
-    avg_velocity_set = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # m/s
-    velocity_loss_pct = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # 0.20 == 20%
+    avg_velocity_set = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    velocity_loss_pct = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
 
     stop_reason = models.CharField(
         max_length=32,
@@ -128,8 +136,8 @@ class Rep(models.Model):
         Set, on_delete=models.CASCADE, related_name="rep_entries"
     )
     rep_number = models.PositiveIntegerField()
-    mean_velocity = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # m/s
-    peak_velocity = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # m/s
+    mean_velocity = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
+    peak_velocity = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
     rom_degrees = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
     duration_sec = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
 
@@ -149,7 +157,7 @@ class Rep(models.Model):
         return f"Rep {self.rep_number} (v={self.mean_velocity} m/s)"
 
 
-# ---------- Load–velocity profile (historical) ----------
+# ---------- Load–velocity profile ----------
 
 class LoadVelocityPoint(models.Model):
     user = models.ForeignKey(
@@ -157,11 +165,10 @@ class LoadVelocityPoint(models.Model):
     )
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
     date = models.DateField()
-    load = models.FloatField(validators=[MinValueValidator(0.0)])            # kg
-    mean_velocity = models.FloatField(validators=[MinValueValidator(0.0)])   # m/s (mean concentric)
-    predicted_1rm_at_time = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])  # kg
+    load = models.FloatField(validators=[MinValueValidator(0.0)])
+    mean_velocity = models.FloatField(validators=[MinValueValidator(0.0)])
+    predicted_1rm_at_time = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0)])
 
-    # Optional provenance back to source session/set
     source_session = models.ForeignKey(Session, null=True, blank=True, on_delete=models.SET_NULL)
     source_set = models.ForeignKey(Set, null=True, blank=True, on_delete=models.SET_NULL)
 
