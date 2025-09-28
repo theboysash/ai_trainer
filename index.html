@@ -1881,6 +1881,9 @@ class VisualInsightSystem {
                 this.stream = null;
                 this.running = false;
                 this.advancedMode = false;
+                this.lastVelocityUpdate = null;
+                this.velocityBuffer = [];
+                this.lastDisplayedVelocity = '0.0°/s';
 
                 // Exercise system
                 this.currentExercise = 'shoulder_press';
@@ -2338,6 +2341,45 @@ class VisualInsightSystem {
                 this.ctx.textAlign = "left";
             }
 
+            calculateDisplayVelocity(stepData) {
+                // If we have actual velocity data, use it
+                if (stepData.velocity && Math.abs(stepData.velocity) > 0.1) {
+                    return `${Math.abs(stepData.velocity).toFixed(1)}°/s`;
+                }
+                
+                // Calculate velocity from angle changes
+                const now = performance.now();
+                if (!this.lastVelocityUpdate) {
+                    this.lastVelocityUpdate = { time: now, angle: stepData.angle };
+                    this.velocityBuffer = [];
+                    return '0.0°/s';
+                }
+                
+                const deltaTime = (now - this.lastVelocityUpdate.time) / 1000; // Convert to seconds
+                const deltaAngle = Math.abs(stepData.angle - this.lastVelocityUpdate.angle);
+                
+                if (deltaTime > 0.05) { // Update every 50ms minimum
+                    const instantVelocity = deltaAngle / deltaTime;
+                    
+                    // Add to buffer for smoothing
+                    this.velocityBuffer.push(instantVelocity);
+                    if (this.velocityBuffer.length > 5) {
+                        this.velocityBuffer.shift();
+                    }
+                    
+                    // Calculate smoothed velocity
+                    const avgVelocity = this.velocityBuffer.reduce((sum, v) => sum + v, 0) / this.velocityBuffer.length;
+                    
+                    this.lastVelocityUpdate = { time: now, angle: stepData.angle };
+                    
+                    // Return formatted velocity
+                    return avgVelocity > 0.1 ? `${avgVelocity.toFixed(1)}°/s` : '0.0°/s';
+                }
+                
+                // Return last known velocity if update too frequent
+                return this.lastDisplayedVelocity || '0.0°/s';
+            }
+
             checkAutoSetCompletion(stepData) {
                 const exercise = this.exercises.get(this.currentExercise);
                 if (!exercise) return;
@@ -2361,6 +2403,9 @@ class VisualInsightSystem {
                 // Update metric styling
                 const formMetric = document.querySelector('#metricForm').parentElement;
                 const vlMetric = document.querySelector('#metricVL').parentElement;
+                // Calculate and display meaningful velocity
+                const velocity = this.calculateDisplayVelocity(stepData);
+                document.getElementById('metricVelocity').textContent = velocity;
 
                 formMetric.className = 'metric';
                 if (stepData.formScore < 50) formMetric.classList.add('critical');
