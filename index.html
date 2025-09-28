@@ -878,15 +878,9 @@
                 <div class="coaching-tips">
                 <div class="tips-label">Coaching Focus</div>
                 <div class="tips-content" id="coachingTips">
-                    <div class="tip-item">
-                        <div class="tip-icon">💡</div>
-                        <div class="tip-text">Focus on controlled movement and proper form</div>
-                    </div>
-                    <div class="tip-item">
-                        <div class="tip-icon">🎯</div>
-                        <div class="tip-text">Maintain consistent tempo throughout each rep</div>
-                    </div>
+                    <!-- Dynamic content will be inserted here -->
                 </div>
+</div>
 </div>
             </div>
         </div>
@@ -2176,6 +2170,62 @@ class VisualInsightSystem {
                 }
             }
 
+            updateCoachingTips(exerciseName) {
+                const tips = {
+                    shoulder_press: [
+                        { icon: '💪', text: 'Keep core tight and avoid arching back' },
+                        { icon: '🎯', text: 'Press straight up, not forward' }
+                    ],
+                    jumping_jacks: [
+                        { icon: '⚡', text: 'Land softly on balls of feet' },
+                        { icon: '🔄', text: 'Keep steady rhythm throughout' }
+                    ],
+                    front_raise: [
+                        { icon: '📐', text: 'Raise to shoulder height, no higher' },
+                        { icon: '🐌', text: 'Control the descent slowly' }
+                    ],
+                    rear_delt_fly: [
+                        { icon: '👐', text: 'Squeeze shoulder blades together' },
+                        { icon: '🎯', text: 'Keep slight bend in elbows' }
+                    ],
+                    bicep_curl: [
+                        { icon: '🔒', text: 'Keep elbows pinned to sides' },
+                        { icon: '💎', text: 'Full range of motion, control the negative' }
+                    ],
+                    tricep_extension: [
+                        { icon: '⬆️', text: 'Keep upper arms stationary' },
+                        { icon: '🎯', text: 'Focus on tricep contraction' }
+                    ],
+                    chest_press: [
+                        { icon: '📏', text: 'Keep wrists straight and strong' },
+                        { icon: '🔄', text: 'Control both push and return' }
+                    ],
+                    rows: [
+                        { icon: '⬅️', text: 'Pull elbows back, not out' },
+                        { icon: '💪', text: 'Squeeze shoulder blades at end' }
+                    ],
+                    squats: [
+                        { icon: '⬇️', text: 'Sit back like sitting in chair' },
+                        { icon: '👣', text: 'Keep weight on heels' }
+                    ]
+                };
+
+                const exerciseTips = tips[exerciseName] || [
+                    { icon: '💡', text: 'Focus on controlled movement and proper form' },
+                    { icon: '🎯', text: 'Maintain consistent tempo throughout each rep' }
+                ];
+
+                const tipsContainer = document.getElementById('coachingTips');
+                if (tipsContainer) {
+                    tipsContainer.innerHTML = exerciseTips.map(tip => `
+                        <div class="tip-item">
+                            <div class="tip-icon">${tip.icon}</div>
+                            <div class="tip-text">${tip.text}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
             drawAdvancedPose(landmarks, w, h) {
                 // Enhanced pose visualization with exercise-specific highlighting
                 const exerciseConnections = {
@@ -2437,6 +2487,7 @@ class VisualInsightSystem {
                     }
 
                     this.updateActiveExercise(exerciseName);
+                    this.updateCoachingTips(exerciseName);
                     this.voiceCoach.onExerciseStart(exerciseName);
                     
                     console.log(`🔄 Switched to: ${exerciseName}`);
@@ -2517,7 +2568,8 @@ class VisualInsightSystem {
                     recommendation: 'Great job! Remember to stretch and hydrate.',
                     trend: 'stable'
                 }]);
-
+                
+                this.updateCoachingTips(this.currentExercise);
                 this.voiceCoach.onWorkoutComplete();
                 console.log(`🎉 Workout complete: ${totalReps} reps in ${duration} minutes`);
             }
