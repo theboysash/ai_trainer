@@ -1,0 +1,50 @@
+import { ExerciseType, SetData } from './exerciseSystem';
+export declare class ImprovedVoiceAgent {
+    private synthesis;
+    private voice;
+    private isEnabled;
+    private messageQueue;
+    private lastSpoken;
+    private readonly MIN_SPEAK_INTERVAL;
+    private intensityThresholds;
+    private currentIntensity;
+    private messageHistory;
+    private readonly MESSAGE_COOLDOWNS;
+    private currentExercise;
+    private exerciseData;
+    private readonly MESSAGE_PRIORITIES;
+    constructor();
+    private initializeVoice;
+    private initializeExerciseData;
+    private startMessageProcessor;
+    private getMessagePriority;
+    updateIntensity(intensity: 'light' | 'moderate' | 'intense'): void;
+    onExerciseStart(exercise: ExerciseType): void;
+    analyzeWorkoutStep(stepData: any): void;
+    private onExerciseSwitch;
+    private trackExerciseVelocity;
+    private checkCriticalIssues;
+    private checkVelocityLoss;
+    private checkFormQuality;
+    private handleRepMilestone;
+    private handleRestPeriod;
+    private getVLThreshold;
+    private getVLWarningMessage;
+    private getWeightAdjustmentRecommendation;
+    onSetComplete(exercise: ExerciseType, setData: SetData): void;
+    onExerciseComplete(exercise: ExerciseType): void;
+    onWorkoutComplete(): void;
+    private queueMessage;
+    private speakImmediate;
+    toggle(): boolean;
+    clearQueue(): void;
+    getStatus(): {
+        enabled: boolean;
+        currentExercise: ExerciseType;
+        queueLength: number;
+        intensity: "light" | "moderate" | "intense";
+        vlThreshold: number;
+        lastSpoken: number;
+    };
+}
+//# sourceMappingURL=improvedVoiceAgent.d.ts.map

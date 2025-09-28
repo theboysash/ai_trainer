@@ -1,0 +1,52 @@
+import { ExerciseType, SetData } from './exerciseSystem';
+export declare class MultiExerciseVoiceAgent {
+    private synthesis;
+    private voice;
+    private isEnabled;
+    private messageQueue;
+    private lastSpoken;
+    private readonly MIN_SPEAK_INTERVAL;
+    private currentExercise;
+    private exerciseVelocityHistory;
+    private exerciseBaselines;
+    private lastFormWarning;
+    private lastVLWarning;
+    private workoutStartTime;
+    private totalSetsCompleted;
+    private workoutIntensity;
+    constructor();
+    private initializeVoice;
+    private startMessageProcessor;
+    analyzeWorkoutStep(stepData: any): void;
+    private trackExerciseVelocity;
+    private analyzeExerciseForm;
+    private analyzeShoulderPressForm;
+    private analyzeLateralRaiseForm;
+    private analyzeFrontRaiseForm;
+    private analyzeRearDeltForm;
+    private analyzeBicepCurlForm;
+    private checkVelocityLoss;
+    private getVLThreshold;
+    private getVLWarningMessage;
+    private handleRepCompletion;
+    private handleRestPeriod;
+    onExerciseStart(exercise: ExerciseType): void;
+    onSetComplete(exercise: ExerciseType, setData: SetData): void;
+    onExerciseComplete(exercise: ExerciseType): void;
+    onWorkoutComplete(): void;
+    private getWeightAdjustment;
+    private queueMessage;
+    private speakImmediate;
+    toggle(): boolean;
+    clearQueue(): void;
+    testExerciseMessage(exercise: ExerciseType): void;
+    getStatus(): {
+        enabled: boolean;
+        currentExercise: ExerciseType;
+        queueLength: number;
+        totalSetsCompleted: number;
+        workoutDuration: number;
+    };
+    reset(): void;
+}
+//# sourceMappingURL=multiExerciseVoiceAgent.d.ts.map

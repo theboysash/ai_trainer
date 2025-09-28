@@ -1,12 +1,12 @@
-// src/improvedVoiceAgent.ts - Clean version without syntax errors
+// src/improvedVoiceAgent.ts - Updated for Vapi Integration
 import { VoiceMessage, WorkoutIntensity } from './voiceAgent';
 import { ExerciseType, SetData } from './exerciseSystem';
 import { getExerciseConfig } from './exerciseConfigs';
+import { startCoach, stopCoach, sendCoachSignal } from './vapi-coach';
 
 export class ImprovedVoiceAgent {
-  private synthesis: SpeechSynthesis;
-  private voice: SpeechSynthesisVoice | null = null;
   private isEnabled: boolean = true;
+  private isVapiActive: boolean = false;
   private messageQueue: VoiceMessage[] = [];
   private lastSpoken: number = 0;
   private readonly MIN_SPEAK_INTERVAL = 8000;
@@ -51,24 +51,8 @@ export class ImprovedVoiceAgent {
   };
 
   constructor() {
-    this.synthesis = window.speechSynthesis;
-    this.initializeVoice();
-    this.startMessageProcessor();
     this.initializeExerciseData();
-  }
-
-  private initializeVoice() {
-    const loadVoices = () => {
-      const voices = this.synthesis.getVoices();
-      this.voice = voices.find(v => 
-        v.name.includes('Google') || 
-        v.name.includes('Microsoft') || 
-        v.lang.startsWith('en')
-      ) || voices[0];
-    };
-
-    loadVoices();
-    this.synthesis.onvoiceschanged = loadVoices;
+    this.startMessageProcessor();
   }
 
   private initializeExerciseData() {
@@ -87,7 +71,10 @@ export class ImprovedVoiceAgent {
 
   private startMessageProcessor() {
     setInterval(() => {
-      if (this.messageQueue.length > 0 && Date.now() - this.lastSpoken > this.MIN_SPEAK_INTERVAL) {
+      if (this.messageQueue.length > 0 && 
+          this.isVapiActive && 
+          Date.now() - this.lastSpoken > this.MIN_SPEAK_INTERVAL) {
+        
         this.messageQueue.sort((a: VoiceMessage, b: VoiceMessage) => {
           const priorityA = this.getMessagePriority(a);
           const priorityB = this.getMessagePriority(b);
@@ -95,7 +82,7 @@ export class ImprovedVoiceAgent {
         });
         
         const message = this.messageQueue.shift()!;
-        this.speakImmediate(message);
+        this.sendToVapi(message);
       }
     }, 1000);
   }
@@ -113,7 +100,61 @@ export class ImprovedVoiceAgent {
     return this.MESSAGE_PRIORITIES.motivation;
   }
 
-  // ADDED: Missing updateIntensity method
+  // Vapi Integration Methods
+  async initializeVapi(): Promise<boolean> {
+    try {
+      await startCoach();
+      this.isVapiActive = true;
+      this.isEnabled = true;
+      console.log('ImprovedVoiceAgent: Vapi initialized');
+      
+      // Send initial greeting
+      await this.sendToVapi({
+        type: 'instruction',
+        message: 'Voice coaching system activated. Ready to optimize your workout with velocity-based training.',
+        priority: 'high',
+        timestamp: Date.now()
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('ImprovedVoiceAgent: Failed to initialize Vapi:', error);
+      this.isVapiActive = false;
+      return false;
+    }
+  }
+
+  async stopVapi(): Promise<void> {
+    try {
+      if (this.isVapiActive) {
+        stopCoach();
+        this.isVapiActive = false;
+        this.isEnabled = false;
+        this.messageQueue = [];
+        console.log('ImprovedVoiceAgent: Vapi stopped');
+      }
+    } catch (error) {
+      console.error('ImprovedVoiceAgent: Error stopping Vapi:', error);
+    }
+  }
+
+  private async sendToVapi(message: VoiceMessage, role: 'user' | 'system' = 'system'): Promise<void> {
+    if (!this.isVapiActive || !this.isEnabled) return;
+
+    try {
+      await sendCoachSignal(message.message, role);
+      this.lastSpoken = Date.now();
+      console.log('ImprovedVoiceAgent sent to Vapi:', message.message);
+    } catch (error) {
+      console.error('ImprovedVoiceAgent: Error sending to Vapi:', error);
+      // Re-queue high priority messages for retry
+      if (message.priority === 'high' && this.messageQueue.length < 3) {
+        this.messageQueue.unshift(message);
+      }
+    }
+  }
+
+  // Updated intensity method
   updateIntensity(intensity: 'light' | 'moderate' | 'intense'): void {
     this.currentIntensity = intensity;
     
@@ -125,20 +166,20 @@ export class ImprovedVoiceAgent {
     
     this.queueMessage({
       type: 'instruction',
-      message: `Training intensity set to ${intensity}. Target velocity loss threshold: ${thresholds[intensity]}.`,
+      message: `Training intensity updated to ${intensity} level. Your velocity loss threshold is now ${thresholds[intensity]}. I'll monitor your performance and provide guidance accordingly.`,
       priority: 'high',
       timestamp: Date.now(),
       category: 'intensity_update'
     });
   }
 
-  // ADDED: Missing onExerciseStart method  
+  // Updated exercise start method  
   onExerciseStart(exercise: ExerciseType): void {
     const config = getExerciseConfig(exercise);
     
     this.queueMessage({
       type: 'instruction', 
-      message: `Starting ${config.name}. ${config.voiceCues.formTips[0]}`,
+      message: `Starting ${config.name}. ${config.voiceCues.formTips[0]} Remember to maintain control throughout the full range of motion.`,
       priority: 'medium',
       timestamp: Date.now(),
       category: 'exercise_start'
@@ -153,8 +194,10 @@ export class ImprovedVoiceAgent {
     }
   }
 
-  // Main analysis method
+  // Main analysis method (unchanged logic, but now uses Vapi)
   analyzeWorkoutStep(stepData: any): void {
+    if (!this.isVapiActive) return;
+
     if (stepData.exercise !== this.currentExercise) {
       this.currentExercise = stepData.exercise;
       this.onExerciseSwitch(stepData.exercise);
@@ -187,7 +230,7 @@ export class ImprovedVoiceAgent {
     
     this.queueMessage({
       type: 'instruction',
-      message: `Starting ${config.name}.`,
+      message: `Switching to ${config.name}. Focus on proper form and controlled movement.`,
       priority: 'high',
       timestamp: Date.now(),
       category: 'exercise_start'
@@ -267,7 +310,7 @@ export class ImprovedVoiceAgent {
       if (now - (this.messageHistory.get('encouragement') || 0) > this.MESSAGE_COOLDOWNS.encouragement) {
         this.queueMessage({
           type: 'encouragement',
-          message: `${stepData.reps} reps down. Keep it controlled.`,
+          message: `${stepData.reps} reps completed. Maintain that control and focus.`,
           priority: 'low',
           timestamp: now,
           category: 'encouragement'
@@ -281,7 +324,7 @@ export class ImprovedVoiceAgent {
     if (stepData.restTimeRemaining === 10) {
       this.queueMessage({
         type: 'instruction',
-        message: '10 seconds.',
+        message: '10 seconds remaining. Prepare for your next set.',
         priority: 'medium',
         timestamp: Date.now(),
         category: 'rest_timer'
@@ -310,11 +353,11 @@ export class ImprovedVoiceAgent {
     const thresholdPercent = Math.round(threshold * 100);
     
     if (vl >= 0.40 || (this.currentIntensity === 'intense' && vl >= 0.35)) {
-      return `Stop the ${exerciseName} set immediately! Velocity loss at ${vlPercent}% exceeds your ${thresholdPercent}% limit.`;
+      return `Stop the ${exerciseName} set immediately! Velocity loss at ${vlPercent}% is dangerously high and exceeds your ${thresholdPercent}% threshold. End this set now to prevent overtraining.`;
     } else if (vl >= threshold) {
-      return `Velocity loss reached ${vlPercent}% on ${exerciseName}. Your ${thresholdPercent}% threshold exceeded. Consider ending this set.`;
+      return `Velocity loss reached ${vlPercent}% on ${exerciseName}. You've exceeded your ${thresholdPercent}% threshold. Consider ending this set to maintain training quality.`;
     } else {
-      return `Velocity dropping to ${vlPercent}% on ${exerciseName}. Approaching your ${thresholdPercent}% threshold.`;
+      return `Velocity dropping to ${vlPercent}% on ${exerciseName}. You're approaching your ${thresholdPercent}% threshold. Monitor closely.`;
     }
   }
 
@@ -323,22 +366,22 @@ export class ImprovedVoiceAgent {
     const tolerance = 0.05;
     
     if (setVL < threshold - tolerance) {
-      return `Set velocity loss was only ${Math.round(setVL * 100)}%. Consider adding 2.5-5% more weight next set to reach your ${Math.round(threshold * 100)}% target zone.`;
+      return `Your set velocity loss was ${Math.round(setVL * 100)}%, which is below your target zone. Consider adding 2.5 to 5 pounds next set to reach your ${Math.round(threshold * 100)}% velocity loss target for optimal training stimulus.`;
     } 
     else if (setVL > threshold + tolerance) {
-      return `High velocity loss at ${Math.round(setVL * 100)}%. Consider reducing weight by 2.5-5% next set to stay in your ${Math.round(threshold * 100)}% target zone.`;
+      return `High velocity loss at ${Math.round(setVL * 100)}%. This exceeds your target zone. Consider reducing weight by 2.5 to 5 pounds next set to stay within your ${Math.round(threshold * 100)}% optimal training range.`;
     }
     
-    return `Perfect velocity loss at ${Math.round(setVL * 100)}%. Right in your target training zone.`;
+    return `Perfect velocity loss at ${Math.round(setVL * 100)}%. You're right in your target training zone. Maintain this load for consistent training stimulus.`;
   }
 
-  // Public methods
+  // Public methods updated for Vapi
   onSetComplete(exercise: ExerciseType, setData: SetData): void {
     const config = getExerciseConfig(exercise);
     
     this.queueMessage({
       type: 'celebration',
-      message: `${config.name} set complete. Good work.`,
+      message: `${config.name} set complete. ${setData.reps || 0} reps completed. Well executed.`,
       priority: 'medium',
       timestamp: Date.now(),
       category: 'set_complete'
@@ -377,7 +420,7 @@ export class ImprovedVoiceAgent {
     
     this.queueMessage({
       type: 'celebration',
-      message: `${config.name} complete.`,
+      message: `${config.name} complete. Excellent work. Moving to the next exercise.`,
       priority: 'medium',
       timestamp: Date.now(),
       category: 'exercise_complete'
@@ -387,14 +430,21 @@ export class ImprovedVoiceAgent {
   onWorkoutComplete(): void {
     this.queueMessage({
       type: 'celebration',
-      message: 'Workout complete. Well done.',
+      message: 'Workout complete. Outstanding effort today. Your velocity-based training data has been recorded. Remember to stretch and hydrate properly.',
       priority: 'high',
       timestamp: Date.now(),
       category: 'workout_complete'
     });
+
+    // Stop Vapi session after a delay
+    setTimeout(() => {
+      this.stopVapi();
+    }, 5000);
   }
 
   private queueMessage(message: VoiceMessage & { category: string }): void {
+    if (!this.isVapiActive) return;
+
     const lastTime = this.messageHistory.get(message.category) || 0;
     const cooldown = this.MESSAGE_COOLDOWNS[message.category as keyof typeof this.MESSAGE_COOLDOWNS] || 10000;
     
@@ -414,33 +464,36 @@ export class ImprovedVoiceAgent {
     }
   }
 
-  private speakImmediate(message: VoiceMessage): void {
-    if (!this.isEnabled || !this.voice) return;
-    
-    const utterance = new SpeechSynthesisUtterance(message.message);
-    utterance.voice = this.voice;
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.7;
-    
-    this.synthesis.speak(utterance);
-    this.lastSpoken = Date.now();
-  }
-
-  // Public controls
-  toggle(): boolean {
-    this.isEnabled = !this.isEnabled;
-    return this.isEnabled;
+  // Public controls updated for Vapi
+  async toggle(): Promise<boolean> {
+    if (this.isVapiActive) {
+      await this.stopVapi();
+      return false;
+    } else {
+      return await this.initializeVapi();
+    }
   }
 
   clearQueue(): void {
     this.messageQueue = [];
-    this.synthesis.cancel();
+  }
+
+  // Manual message sending for direct interaction
+  async sendDirectMessage(message: string, role: 'user' | 'system' = 'user'): Promise<void> {
+    if (this.isVapiActive) {
+      await this.sendToVapi({
+        type: 'instruction',
+        message,
+        priority: 'high',
+        timestamp: Date.now()
+      }, role);
+    }
   }
 
   getStatus() {
     return {
       enabled: this.isEnabled,
+      vapiActive: this.isVapiActive,
       currentExercise: this.currentExercise,
       queueLength: this.messageQueue.length,
       intensity: this.currentIntensity,

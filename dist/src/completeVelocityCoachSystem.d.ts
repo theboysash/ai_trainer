@@ -1,0 +1,62 @@
+import { ExerciseType } from './enhancedExerciseSystem';
+declare class KinematicAnalyzer {
+    static calculateJointAngle(joint1: [number, number], joint2: [number, number], joint3: [number, number]): number;
+    static calculateAngularVelocity(currentAngle: number, previousAngle: number, deltaTime: number): number;
+    static calculateLinearVelocity(angularVelocity: number, radiusOfRotation: number): number;
+    static calculateRadius(shoulder: [number, number], elbow: [number, number], wrist: [number, number]): number;
+    static classifyMovement(exerciseType: ExerciseType): 'leg_movements' | 'upper_body_movements' | 'core_movements';
+}
+export declare class VelocityCoachAI {
+    private landmarker?;
+    private voiceAgent;
+    private database?;
+    private exerciseDetectors;
+    private currentExercise;
+    private video;
+    private canvas;
+    private ctx;
+    private stream?;
+    private running;
+    private currentSession?;
+    private currentUser?;
+    private sessionStartTime;
+    private totalSetsCompleted;
+    private totalRepsCompleted;
+    private exerciseProgress;
+    private exerciseState;
+    constructor();
+    private initializeDatabase;
+    private createDemoUser;
+    private initializeExercises;
+    private getTargetSets;
+    private getTargetReps;
+    private createUI;
+    private createExerciseCard;
+    private createVBTControls;
+    private setupEventHandlers;
+    start(): Promise<void>;
+    private loop;
+    private processCurrentExercise;
+    private analyzeKinematics;
+    private completeCurrentSet;
+    private saveSetToDatabase;
+    private autoAdvanceExercise;
+    private switchExercise;
+    private completeWorkout;
+    stop(): void;
+    private skipRest;
+    private nextExercise;
+    private toggleVoice;
+    private updateMetrics;
+    private updateUI;
+    private drawPoseSkeleton;
+    private highlightActiveJoints;
+    private drawNoPersonMessage;
+    private getDefaultStepData;
+    private calculateFormScore;
+    private getVelocityLoss;
+    getCurrentExercise(): ExerciseType;
+    destroy(): void;
+}
+export { KinematicAnalyzer };
+//# sourceMappingURL=completeVelocityCoachSystem.d.ts.map
