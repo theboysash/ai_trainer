@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VelocityCoach AI - Revolutionizing Fitness Training</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #1d1d1f;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        .section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 80px 20px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.03em;
+        }
+
+        .hero .tagline {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 60px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .feature-section {
+            background: #f5f5f7;
+            padding: 120px 20px;
+        }
+
+        .feature-section.dark {
+            background: #000;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 60px;
+            align-items: center;
+        }
+
+        .feature-text h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .feature-text p {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            color: #86868b;
+            margin-bottom: 30px;
+        }
+
+        .feature-section.dark .feature-text p {
+            color: #a1a1a6;
+        }
+
+        .feature-highlights {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .highlight-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .highlight-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        .feature-visual {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-visual::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .visual-content {
+            position: relative;
+            z-index: 2;
+        }
+        .metric-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tech-specs {
+            background: #fff;
+            padding: 120px 20px;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .spec-card {
+            background: #f5f5f7;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .spec-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .spec-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 20px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .spec-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .spec-card p {
+            color: #86868b;
+            line-height: 1.6;
+        }
+
+        .final-cta {
+            background: linear-gradient(135deg, #000 0%, #333 100%);
+            color: white;
+            text-align: center;
+            padding: 120px 20px;
+        }
+
+        .final-cta h2 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .final-cta p {
+            font-size: 1.4rem;
+            opacity: 0.8;
+            margin-bottom: 50px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px 50px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: inline-block;
+            transition: all 0.3s ease;
+            margin-right: 20px;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .cta-secondary {
+            color: white;
+            padding: 20px 50px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .progress-visualization {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+
+        .progress-item {
+            text-align: center;
+        }
+
+        .progress-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: conic-gradient(#4ade80 75%, rgba(255,255,255,0.2) 75%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .feature-text h2 {
+                font-size: 2rem;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            
+            .final-cta h2 {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="section hero">
+        <div class="hero-content">
+            <h1>VelocityCoach AI</h1>
+            <div class="tagline">The future of intelligent fitness training.</div>
+            <div class="subtitle">Professional-grade velocity-based training meets AI-powered coaching.<br>Transform your workouts with real-time form analysis and personalized guidance.</div>
+            <a href="#features" class="cta-button">Discover the Technology</a>
+        </div>
+    </section>
+
+    <!-- Real-time AI Coaching -->
+    <section class="section feature-section">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-text">
+                    <h2>Your AI Personal Trainer</h2>
+                    <p>Experience the power of real-time AI coaching that adapts to your performance, provides instant feedback, and guides you through every rep with professional precision.</p>
+                    <div class="feature-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🎙️</div>
+                            <span>Real-time voice coaching with VAPI integration</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🧠</div>
+                            <span>AI-powered form analysis and correction</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">📈</div>
+                            <span>Adaptive intensity based on your performance</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">⚡</div>
+                            <span>Instant feedback for optimal training stimulus</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-visual floating">
+                    <div class="visual-content">
+                        <div class="metric-display">
+                            <div class="metric-value">92%</div>
+                            <div class="metric-label">Form Score</div>
+                        </div>
+                        <div class="metric-display">
+                            <div class="metric-value">18%</div>
+                            <div class="metric-label">Velocity Loss</div>
+                        </div>
+                        <p style="margin-top: 20px; opacity: 0.9;">💡 "Great form! 2 more reps to reach optimal velocity loss."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Velocity-Based Training -->
+    <section class="section feature-section dark">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-visual floating">
+                    <div class="visual-content">
+                        <h3 style="margin-bottom: 24px;">Live VBT Monitoring</h3>
+                        <div class="progress-visualization">
+                            <div class="progress-item">
+                                <div class="progress-circle">0.8m/s</div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Mean Velocity</div>
+                            </div>
+                            <div class="progress-item">
+                                <div class="progress-circle">85%</div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">1RM Load</div>
+                            </div>
+                        </div>
+                        <p style="opacity: 0.9;">📊 Real-time load-velocity profiling for optimal training zones</p>
+                    </div>
+                </div>
+                <div class="feature-text">
+                    <h2>Scientific Velocity-Based Training</h2>
+                    <p>Train like a professional athlete with cutting-edge velocity-based training technology. Monitor velocity loss in real-time to optimize training stimulus and prevent overreaching.</p>
+                    <div class="feature-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-icon">⚡</div>
+                            <span>Real-time velocity loss monitoring (15-40% thresholds)</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🎯</div>
+                            <span>Automatic 1RM predictions from velocity profiles</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">📊</div>
+                            <span>Load-velocity relationship tracking</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🏆</div>
+                            <span>Professional-grade training optimization</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Computer Vision & Form Analysis -->
+    <section class="section feature-section">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-text">
+                    <h2>Advanced Computer Vision</h2>
+                    <p>Powered by MediaPipe technology, our system tracks 33 body landmarks in real-time to provide comprehensive exercise analysis across multiple muscle groups.</p>
+                    <div class="feature-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-icon">👁️</div>
+                            <span>33-point pose landmark detection</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🎯</div>
+                            <span>Sub-degree angle accuracy for precise form scoring</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">💪</div>
+                            <span>10+ exercises across all major muscle groups</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">⚡</div>
+                            <span>60 FPS real-time analysis with no lag</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-visual">
+                    <div class="visual-content">
+                        <h3 style="margin-bottom: 24px;">Live Exercise Detection</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0;">
+                            <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px;">
+                                <div style="font-size: 1.8rem; font-weight: 700;">156°</div>
+                                <div style="font-size: 0.8rem; opacity: 0.8;">Shoulder Angle</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 8px;">
+                                <div style="font-size: 1.8rem; font-weight: 700;">8</div>
+                                <div style="font-size: 0.8rem; opacity: 0.8;">Reps Completed</div>
+                            </div>
+                        </div>
+                        <p style="opacity: 0.9;">🔍 Enhanced detection for Shoulders, Arms, Chest, Back & Legs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Specifications -->
+    <section class="section tech-specs">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 3rem; margin-bottom: 60px; font-weight: 700;">Built with Premium Technology</h2>
+            <div class="specs-grid">
+                <div class="spec-card">
+                    <div class="spec-icon">🤖</div>
+                    <h3>MediaPipe AI</h3>
+                    <p>Google's state-of-the-art pose detection running at 60 FPS with sub-millisecond latency for real-time coaching.</p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon">🎙️</div>
+                    <h3>VAPI Voice AI</h3>
+                    <p>Advanced conversational AI that provides contextual coaching cues based on your real-time performance data.</p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon">📊</div>
+                    <h3>MongoDB Atlas</h3>
+                    <p>Professional-grade database storing detailed workout analytics, progression tracking, and historical performance data.</p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon">⚡</div>
+                    <h3>TypeScript Engine</h3>
+                    <p>Robust, type-safe codebase ensuring reliable performance and seamless user experience across all devices.</p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon">🧬</div>
+                    <h3>VBT Algorithms</h3>
+                    <p>Research-backed velocity-based training calculations providing professional-level insights for optimal adaptation.</p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon">🎨</div>
+                    <h3>Canvas Visualization</h3>
+                    <p>High-performance HTML5 Canvas rendering for smooth, responsive visual feedback and exercise tracking.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Smart Features -->
+    <section class="section feature-section dark">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-visual">
+                    <div class="visual-content">
+                        <h3 style="margin-bottom: 24px;">Smart Workout Insights</h3>
+                        <div style="text-align: left; margin: 24px 0;">
+                            <div style="margin: 16px 0; padding: 12px; background: rgba(34, 197, 94, 0.2); border-left: 4px solid #22c55e; border-radius: 4px;">
+                                <div style="font-weight: 600; color: #22c55e;">✓ Excellent Form</div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Maintain this technique throughout the set</div>
+                            </div>
+                            <div style="margin: 16px 0; padding: 12px; background: rgba(245, 158, 11, 0.2); border-left: 4px solid #f59e0b; border-radius: 4px;">
+                                <div style="font-weight: 600; color: #f59e0b;">⚠ Velocity Declining</div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Consider ending set in 2-3 reps</div>
+                            </div>
+                        </div>
+                        <p style="opacity: 0.9;">🧠 AI analyzes trends to optimize your training</p>
+                    </div>
+                </div>
+                <div class="feature-text">
+                    <h2>Intelligent Performance Analytics</h2>
+                    <p>Our AI continuously analyzes your form, velocity, and fatigue patterns to provide actionable insights that help you train smarter, not just harder.</p>
+                    <div class="feature-highlights">
+                        <div class="highlight-item">
+                            <div class="highlight-icon">📈</div>
+                            <span>Real-time trend analysis and performance prediction</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🎯</div>
+                            <span>Automatic set termination recommendations</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">📊</div>
+                            <span>Progressive overload optimization</span>
+                        </div>
+                        <div class="highlight-item">
+                            <div class="highlight-icon">🏆</div>
+                            <span>Personalized training zone adjustments</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="section final-cta">
+        <div class="container">
+            <h2>Ready to Transform Your Training?</h2>
+            <p>Join the future of intelligent fitness. Experience professional-grade coaching, scientific precision, and AI-powered insights that adapt to your unique performance.</p>
+            <div style="margin-top: 40px;">
+                <a href="#demo" class="cta-primary pulse">Try VelocityCoach AI</a>
+                <a href="#contact" class="cta-secondary">Contact Our Team</a>
+            </div>
+            <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); opacity: 0.7;">
+                <p style="font-size: 1rem;">Built for the hackathon with ❤️ • Advanced AI • Real-time Analytics • Professional Grade</p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all feature sections
+        document.querySelectorAll('.feature-text, .feature-visual, .spec-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+            observer.observe(el);
+        });
+
+        // Dynamic metrics animation
+        function animateMetrics() {
+            const metrics = document.querySelectorAll('.metric-value');
+            metrics.forEach(metric => {
+                const finalValue = metric.textContent;
+                const isPercentage = finalValue.includes('%');
+                const numericValue = parseInt(finalValue);
+                
+                let current = 0;
+                const increment = numericValue / 50;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= numericValue) {
+                        current = numericValue;
+                        clearInterval(timer);
+                    }
+                    metric.textContent = Math.floor(current) + (isPercentage ? '%' : (finalValue.includes('m/s') ? 'm/s' : '°'));
+                }, 30);
+            });
+        }
+
+        // Trigger metric animation when visible
+        const metricsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateMetrics();
+                    metricsObserver.unobserve(entry.target);
+                }
+            });
+        });
+
+        document.querySelectorAll('.metric-display').forEach(el => {
+            metricsObserver.observe(el);
+        });
+    </script>
+</body>
+</html>
