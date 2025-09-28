@@ -72,6 +72,12 @@
             align-items: center;
             gap: 8px;
         }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* Change to 3 columns */
+            grid-template-rows: 1fr 1fr; /* Add 2 rows */
+            gap: 12px;
+        }
 
         .exercise-grid {
             display: grid;
@@ -834,7 +840,7 @@
                     </div>
                     <div class="metric">
                         <div class="metric-value" id="metricVelocity">—</div>
-                        <div class="metric-label">Velocity</div>
+                        <div class="metric-label">Mean Concentric Velocity</div>
                     </div>
                     <div class="metric">
                         <div class="metric-value" id="metricForm">100</div>
@@ -843,6 +849,10 @@
                     <div class="metric">
                         <div class="metric-value" id="metricVL">0%</div>
                         <div class="metric-label">Velocity Loss</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="metricPredicted1RM">—</div>
+                        <div class="metric-label">Predicted 1RM</div>
                     </div>
                 </div>
             </div>
@@ -1742,30 +1752,35 @@
         }
     }
 
-    async toggle() {
+        async toggle() {
         if (!this.vapi) {
             console.error('VAPI not initialized');
             return false;
         }
 
         if (this.isEnabled) {
-            this.vapi.stop();
-            this.isEnabled = false;
-            this.isConnected = false;
-            this.isProcessingMessage = false;
-            this.messageQueue = [];
+            try {
+                this.vapi.stop();
+                this.isEnabled = false;
+                this.isConnected = false;
+                this.isProcessingMessage = false;
+                this.messageQueue = [];
+            } catch (error) {
+                console.error('Error stopping VAPI:', error);
+            }
         } else {
             try {
+                this.isEnabled = true; // Set enabled first
                 await this.vapi.start('ad349484-eed2-4192-b7e4-caa6cb6f31d0');
-                this.isEnabled = true;
+                // isConnected will be set to true in the 'call-start' event handler
             } catch (error) {
                 console.error('Failed to start VAPI:', error);
                 this.isEnabled = false;
+                this.isConnected = false;
             }
         }
         return this.isEnabled;
     }
-
     // Reset message tracking when a new set starts
     onNewSet() {
         this.currentSetMessages = {
@@ -1890,8 +1905,9 @@ class VisualInsightSystem {
         this.insights = [];
     }
 
-    analyze(stepData) {
+    analyze(stepData, velocityData = null) {
         this.insights = [];
+        this.velocityData = velocityData;
         
         // Form analysis
         if (stepData.formScore < 50) {
@@ -1948,6 +1964,37 @@ class VisualInsightSystem {
             });
         }
 
+        if (stepData.reps > 0 && this.velocityData?.meanConcentricVelocity > 0) {
+            const velocity = this.velocityData.meanConcentricVelocity;
+            const predicted1RM = this.velocityData.predicted1RM;
+            
+            if (predicted1RM > 85) {
+                this.insights.push({
+                    type: 'velocity',
+                    severity: 'warning',
+                    message: `High intensity: ${Math.round(predicted1RM)}% 1RM at ${velocity.toFixed(2)}m/s`,
+                    recommendation: 'Consider reducing load or ending set to maintain velocity.',
+                    trend: 'stable'
+                });
+            } else if (predicted1RM > 60) {
+                this.insights.push({
+                    type: 'velocity',
+                    severity: 'good',
+                    message: `Optimal zone: ${Math.round(predicted1RM)}% 1RM at ${velocity.toFixed(2)}m/s`,
+                    recommendation: 'Maintain current intensity for strength gains.',
+                    trend: 'stable'
+                });
+            } else if (predicted1RM > 20) {
+                this.insights.push({
+                    type: 'velocity',
+                    severity: 'good',
+                    message: `Speed zone: ${Math.round(predicted1RM)}% 1RM at ${velocity.toFixed(2)}m/s`,
+                    recommendation: 'Focus on explosive movement and technique.',
+                    trend: 'stable'
+                });
+            }
+        }
+
         return this.insights;
     }
 
@@ -1978,7 +2025,43 @@ class VisualInsightSystem {
                 this.lastVelocityUpdate = null;
                 this.velocityBuffer = [];
                 this.lastDisplayedVelocity = '0.0°/s';
+                this.exerciseDistances = {
+                    'shoulder_press': 0.49,
+                    'bicep_curl': 0.7,
+                    'tricep_extension': 0.43,
+                    'chest_press': 0.47,
+                    'rows': 0.51,
+                    'squats': 0.6,
+                    // Default for other exercises
+                    'jumping_jacks': 0.5,
+                    'front_raise': 0.5,
+                    'rear_delt_fly': 0.5
+                };
 
+                this.exercise1RMs = {
+                    'shoulder_press': 25,
+                    'bicep_curl': 20,
+                    'tricep_extension': 15,
+                    'chest_press': 50,
+                    'rows': 50,
+                    'squats': 50,
+                    'jumping_jacks': 0, // Bodyweight exercise
+                    'front_raise': 17,
+                    'rear_delt_fly': 15
+                };
+
+                this.setTiming = {
+                    startTime: null,
+                    endTime: null,
+                    isActive: false,
+                    firstRepTime: null
+                };
+
+                this.velocityData = {
+                    meanConcentricVelocity: 0,
+                    predicted1RM: 0,
+                    currentWeight: 10 // This could be input by user or estimated
+                };
                 // Exercise system
                 this.currentExercise = 'shoulder_press';
                 this.exercises = new Map([
@@ -2170,6 +2253,79 @@ class VisualInsightSystem {
                 }
             }
 
+            // Add this new method to calculate mean concentric velocity and predict 1RM
+            calculateVelocityMetrics(reps, setDuration) {
+                const distance = this.exerciseDistances[this.currentExercise] || 0.5;
+                
+                if (reps === 0 || setDuration === 0) {
+                    return {
+                        meanConcentricVelocity: 0,
+                        predicted1RM: 0
+                    };
+                }
+                
+                // Calculate mean concentric velocity: (distance / time_per_rep) / 2
+                const timePerRep = setDuration / reps;
+                const meanConcentricVelocity = (distance / timePerRep) / 2;
+                
+                // Predict 1RM using load-velocity relationship
+                const predicted1RM = this.predict1RMFromVelocity(meanConcentricVelocity);
+                
+                return {
+                    meanConcentricVelocity: Math.max(0, meanConcentricVelocity),
+                    predicted1RM: Math.max(0, predicted1RM)
+                };
+            }
+
+            // Add this new method for 1RM prediction based on velocity profile
+            predict1RMFromVelocity(velocity) {
+                // Load-velocity relationship data points from the regression
+                const velocityProfile = [
+                    { percent: 20, velocity: 1.41 },
+                    { percent: 40, velocity: 1.16 },
+                    { percent: 60, velocity: 0.86 },
+                    { percent: 80, velocity: 0.55 },
+                    { percent: 90, velocity: 0.40 }
+                ];
+                
+                // If velocity is too low, return 0 (safety check)
+                if (velocity < 0.2) return 0;
+                
+                // If velocity is higher than 90% 1RM velocity, extrapolate carefully
+                if (velocity >= velocityProfile[4].velocity) {
+                    // Linear extrapolation between 80% and 90%
+                    const slope = (velocityProfile[4].percent - velocityProfile[3].percent) / 
+                                (velocityProfile[4].velocity - velocityProfile[3].velocity);
+                    const predictedPercent = velocityProfile[4].percent + slope * (velocity - velocityProfile[4].velocity);
+                    return Math.min(100, Math.max(0, predictedPercent)); // Cap at 100%
+                }
+                
+                // Find the appropriate range for interpolation
+                for (let i = 0; i < velocityProfile.length - 1; i++) {
+                    const current = velocityProfile[i];
+                    const next = velocityProfile[i + 1];
+                    
+                    if (velocity <= current.velocity && velocity >= next.velocity) {
+                        // Linear interpolation
+                        const ratio = (velocity - next.velocity) / (current.velocity - next.velocity);
+                        const predictedPercent = next.percent + ratio * (current.percent - next.percent);
+                        return Math.max(0, predictedPercent);
+                    }
+                }
+                
+                // If velocity is lower than 20% 1RM velocity, extrapolate downward
+                if (velocity < velocityProfile[0].velocity) {
+                    const slope = (velocityProfile[1].percent - velocityProfile[0].percent) / 
+                                (velocityProfile[1].velocity - velocityProfile[0].velocity);
+                    const predictedPercent = velocityProfile[0].percent + slope * (velocity - velocityProfile[0].velocity);
+                    return Math.max(0, predictedPercent);
+                }
+                
+                return 0;
+            }
+
+
+
             // Advanced loop with full pose detection
             advancedLoop() {
                 if (!this.running || !this.landmarker) return;
@@ -2208,7 +2364,7 @@ class VisualInsightSystem {
                         
                         // Update systems
                         this.updateMetrics(stepData);
-                        this.updateInsights(this.insightSystem.analyze(stepData));
+                        this.updateInsights(this.insightSystem.analyze(stepData, this.velocityData));
                         this.voiceCoach.analyzeStep(stepData);
                         
                         // Auto set completion
@@ -2487,19 +2643,52 @@ class VisualInsightSystem {
             }
 
             updateMetrics(stepData) {
+                // Handle set timing
+                if (stepData.isNewRep) {
+                    if (!this.setTiming.isActive) {
+                        // First rep of the set
+                        this.setTiming.startTime = Date.now();
+                        this.setTiming.firstRepTime = Date.now();
+                        this.setTiming.isActive = true;
+                    }
+                }
+                
+                // Calculate velocity metrics if we have timing data
+                let velocityMetrics = { meanConcentricVelocity: 0, predicted1RM: 0 };
+                if (this.setTiming.isActive && this.setTiming.startTime && stepData.reps > 0) {
+                    const setDuration = (Date.now() - this.setTiming.startTime) / 1000; // Convert to seconds
+                    velocityMetrics = this.calculateVelocityMetrics(stepData.reps, setDuration);
+                    this.velocityData = { ...this.velocityData, ...velocityMetrics };
+                }
+                
+                // Update existing metrics
                 document.getElementById('repCount').textContent = stepData.reps;
                 document.getElementById('metricAngle').textContent = `${Math.round(stepData.angle)}°`;
-                document.getElementById('metricVelocity').textContent = stepData.velocity ? 
-                    `${Math.abs(stepData.velocity).toFixed(1)}°/s` : '—';
+                
+                // Enhanced velocity display with mean concentric velocity
+                const instantVelocity = this.calculateDisplayVelocity(stepData);
+                const meanVelocity = velocityMetrics.meanConcentricVelocity > 0 ? 
+                    `${velocityMetrics.meanConcentricVelocity.toFixed(2)}m/s` : instantVelocity;
+                document.getElementById('metricVelocity').textContent = meanVelocity;
+                
                 document.getElementById('metricForm').textContent = Math.round(stepData.formScore);
                 document.getElementById('metricVL').textContent = `${Math.round((stepData.velocityLoss || 0) * 100)}%`;
+                
+                // NEW: Update predicted 1RM display
+                // NEW: Update predicted 1RM display
+                const predicted1RMElement = document.getElementById('metricPredicted1RM');
+                if (predicted1RMElement) {
+                    const staticWeight = this.exercise1RMs[this.currentExercise] || 40;
+                    if (staticWeight > 0) {
+                        predicted1RMElement.textContent = `${staticWeight}kg`;
+                    } else {
+                        predicted1RMElement.textContent = 'BW'; // Bodyweight
+                    }
+                }
 
-                // Update metric styling
+                // Update metric styling (existing code)
                 const formMetric = document.querySelector('#metricForm').parentElement;
                 const vlMetric = document.querySelector('#metricVL').parentElement;
-                // Calculate and display meaningful velocity
-                const velocity = this.calculateDisplayVelocity(stepData);
-                document.getElementById('metricVelocity').textContent = velocity;
 
                 formMetric.className = 'metric';
                 if (stepData.formScore < 50) formMetric.classList.add('critical');
@@ -2509,12 +2698,15 @@ class VisualInsightSystem {
                 if (stepData.velocityLoss > 0.3) vlMetric.classList.add('critical');
                 else if (stepData.velocityLoss > 0.2) vlMetric.classList.add('warning');
 
-                // Update exercise info
+                // Update exercise info with predicted 1RM
                 const exercise = this.exercises.get(this.currentExercise);
                 if (exercise) {
                     document.getElementById('currentExerciseName').textContent = exercise.name;
-                    document.getElementById('currentSetInfo').textContent = 
-                        `Set ${exercise.currentSet} of ${exercise.sets} • Target: ${exercise.reps} reps`;
+                    let setInfo = `Set ${exercise.currentSet} of ${exercise.sets} • Target: ${exercise.reps} reps`;
+                    if (velocityMetrics.predicted1RM > 0) {
+                        setInfo += ` • Est. Load: ${Math.round(velocityMetrics.predicted1RM)}% 1RM`;
+                    }
+                    document.getElementById('currentSetInfo').textContent = setInfo;
                 }
             }
 
@@ -2574,7 +2766,12 @@ class VisualInsightSystem {
             completeSet() {
                 const exercise = this.exercises.get(this.currentExercise);
                 if (!exercise) return;
-
+                this.setTiming = {
+                    startTime: null,
+                    endTime: null,
+                    isActive: false,
+                    firstRepTime: null
+                };
                 // Get current rep count
                 let currentReps = 0;
                 const enhancedDetector = this.enhancedDetectors[this.currentExercise];
@@ -2585,6 +2782,24 @@ class VisualInsightSystem {
                 }
 
                 this.voiceCoach.onSetComplete(this.currentExercise, { reps: currentReps });
+
+                const currentVelocity = this.velocityData.meanConcentricVelocity;
+                const predicted1RM = this.velocityData.predicted1RM;
+
+                if (currentVelocity > 0) {
+                    let velocityFeedback = `Set completed at ${currentVelocity.toFixed(2)} meters per second.`;
+                    
+                    // Provide training zone feedback based on predicted load
+                    if (predicted1RM > 80) {
+                        velocityFeedback += " High intensity zone - excellent power output.";
+                    } else if (predicted1RM > 60) {
+                        velocityFeedback += " Moderate intensity zone - good training stimulus.";
+                    } else if (predicted1RM > 40) {
+                        velocityFeedback += " Light intensity zone - focus on speed and technique.";
+                    }
+                    
+                    this.voiceCoach.queueMessage(velocityFeedback);
+                }
 
                 // Update exercise data
                 exercise.completed += currentReps;
@@ -2713,21 +2928,40 @@ class VisualInsightSystem {
                 console.log(`🎉 Workout complete: ${totalReps} reps in ${duration} minutes`);
             }
 
-            toggleVoice() {
-                const enabled = this.voiceCoach.toggle();
-                const btn = document.getElementById('btnToggleVoice');
-                const status = this.voiceCoach.getStatus();
-                
-                if (enabled && status.connected) {
-                    btn.textContent = 'Voice: ON';
-                    btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-                } else {
-                    btn.textContent = 'Voice: OFF';
-                    btn.style.background = 'linear-gradient(135deg, #21262d, #30363d)';
+            async toggleVoice() {
+                try {
+                    const enabled = await this.voiceCoach.toggle();
+                    const btn = document.getElementById('btnToggleVoice');
+                    
+                    // Add a small delay to ensure status is updated
+                    setTimeout(() => {
+                        const status = this.voiceCoach.getStatus();
+                        
+                        if (status.enabled && status.connected) {
+                            btn.textContent = 'Voice: ON';
+                            btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                            btn.style.borderColor = '#22c55e';
+                        } else if (status.enabled && !status.connected) {
+                            btn.textContent = 'Voice: CONNECTING';
+                            btn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                            btn.style.borderColor = '#f59e0b';
+                        } else {
+                            btn.textContent = 'Voice: OFF';
+                            btn.style.background = 'linear-gradient(135deg, #21262d, #30363d)';
+                            btn.style.borderColor = '#30363d';
+                        }
+                    }, 100);
+                    
+                    return enabled;
+                } catch (error) {
+                    console.error('Error toggling voice:', error);
+                    const btn = document.getElementById('btnToggleVoice');
+                    btn.textContent = 'Voice: ERROR';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    return false;
                 }
-                
-                return enabled;
             }
+
 
             resetWorkout() {
                 // Reset all exercises
