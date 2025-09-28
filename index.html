@@ -105,6 +105,10 @@
             opacity: 0.7;
         }
 
+        .exercise-card.enhanced {
+            border-left: 4px solid #7c3aed;
+        }
+
         .exercise-name {
             font-size: 13px;
             font-weight: 600;
@@ -216,6 +220,45 @@
             color: #7d8590;
             text-transform: uppercase;
             letter-spacing: 1px;
+        }
+
+        .coaching-tips {
+            margin-top: 16px;
+        }
+
+        .tips-label {
+            font-size: 12px;
+            color: #7d8590;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tips-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+
+        .tip-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .tip-text {
+            font-size: 11px;
+            color: #e6edf3;
+            line-height: 1.3;
         }
 
         .controls-panel {
@@ -553,10 +596,32 @@
             text-align: center;
         }
 
+        .loading-status {
+            font-size: 14px;
+            color: #7d8590;
+            margin-top: 8px;
+            text-align: center;
+        }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
             }
+        }
+
+        /* Enhanced Detection Badge */
+        .enhanced-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Responsive Design */
@@ -601,15 +666,21 @@
             color: #22c55e;
             border: 1px solid #22c55e;
         }
+
+        .status-badge.upgrading {
+            background: rgba(124, 58, 237, 0.2);
+            color: #7c3aed;
+            border: 1px solid #7c3aed;
+        }
     </style>
 </head>
 <body>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">
-            <div>Initializing VelocityCoach AI...</div>
-            <div style="font-size: 14px; color: #7d8590; margin-top: 8px;">
-                Loading MediaPipe • Preparing AI Coach • Setting up Voice
+            <div>VelocityCoach AI</div>
+            <div class="loading-status" id="loadingStatus">
+                Starting up...
             </div>
         </div>
     </div>
@@ -624,7 +695,7 @@
 
             <div class="muscle-group">
                 <div class="muscle-group-title">
-                    💪 Shoulders
+                    💪 Shoulders and Core
                 </div>
                 <div class="exercise-grid" id="shoulderExercises">
                     <div class="exercise-card active" data-exercise="shoulder_press">
@@ -634,8 +705,8 @@
                             <div class="progress-fill" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="exercise-card" data-exercise="lateral_raise">
-                        <div class="exercise-name">Lateral Raise</div>
+                    <div class="exercise-card" data-exercise="jumping_jacks">
+                        <div class="exercise-name">Jumping Jacks</div>
                         <div class="exercise-progress">Set 0/3 • 0/12 reps</div>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: 0%"></div>
@@ -663,7 +734,8 @@
                     🫸 Arms
                 </div>
                 <div class="exercise-grid" id="armExercises">
-                    <div class="exercise-card" data-exercise="bicep_curl">
+                    <div class="exercise-card enhanced" data-exercise="bicep_curl">
+                        <div class="enhanced-badge">Pro</div>
                         <div class="exercise-name">Bicep Curl</div>
                         <div class="exercise-progress">Set 0/3 • 0/10 reps</div>
                         <div class="progress-bar">
@@ -692,13 +764,6 @@
                             <div class="progress-fill" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="exercise-card" data-exercise="push_ups">
-                        <div class="exercise-name">Push-ups</div>
-                        <div class="exercise-progress">Set 0/3 • 0/15 reps</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -714,7 +779,8 @@
                             <div class="progress-fill" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="exercise-card" data-exercise="squats">
+                    <div class="exercise-card enhanced" data-exercise="squats">
+                        <div class="enhanced-badge">Pro</div>
                         <div class="exercise-name">Squats</div>
                         <div class="exercise-progress">Set 0/4 • 0/12 reps</div>
                         <div class="progress-bar">
@@ -801,14 +867,6 @@
                 <div class="panel-title">
                     🎙️ AI Voice Coach
                 </div>
-                <div class="voice-controls">
-                    <div class="voice-status">
-                        <div class="voice-indicator" id="voiceIndicator"></div>
-                        <span id="voiceStatus">Voice Ready</span>
-                    </div>
-                    <button class="voice-toggle" id="voiceToggle">Start Voice</button>
-                </div>
-                
                 <div class="intensity-selector">
                     <div class="intensity-label" id="intensityLabel">Training Intensity</div>
                     <select class="intensity-select" id="intensitySelect" aria-labelledby="intensityLabel">
@@ -817,603 +875,658 @@
                         <option value="intense">Intense (VL ≤40%)</option>
                     </select>
                 </div>
+                <div class="coaching-tips">
+                <div class="tips-label">Coaching Focus</div>
+                <div class="tips-content" id="coachingTips">
+                    <div class="tip-item">
+                        <div class="tip-icon">💡</div>
+                        <div class="tip-text">Focus on controlled movement and proper form</div>
+                    </div>
+                    <div class="tip-item">
+                        <div class="tip-icon">🎯</div>
+                        <div class="tip-text">Maintain consistent tempo throughout each rep</div>
+                    </div>
+                </div>
+</div>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
-
-        // Complete VelocityCoach AI Application
-        class VelocityCoachAI {
-            constructor() {
-                this.initializeComponents();
-                this.setupEventHandlers();
-                this.initializeApp();
-            }
-
-            initializeComponents() {
-                // Core components
-                this.landmarker = null;
-                this.video = document.getElementById("video");
-                this.canvas = document.getElementById("canvas");
-                this.ctx = this.canvas.getContext("2d");
-                this.stream = null;
-                this.running = false;
-
-                // Exercise system
-                this.currentExercise = 'shoulder_press';
-                this.exercises = new Map([
-                    ['shoulder_press', { name: 'Shoulder Press', sets: 4, reps: 8, completed: 0, currentSet: 1 }],
-                    ['lateral_raise', { name: 'Lateral Raise', sets: 3, reps: 12, completed: 0, currentSet: 1 }],
-                    ['front_raise', { name: 'Front Raise', sets: 3, reps: 12, completed: 0, currentSet: 1 }],
-                    ['rear_delt_fly', { name: 'Rear Delt Fly', sets: 3, reps: 15, completed: 0, currentSet: 1 }],
-                    ['bicep_curl', { name: 'Bicep Curl', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
-                    ['tricep_extension', { name: 'Tricep Extension', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
-                    ['chest_press', { name: 'Chest Press', sets: 3, reps: 8, completed: 0, currentSet: 1 }],
-                    ['push_ups', { name: 'Push-ups', sets: 3, reps: 15, completed: 0, currentSet: 1 }],
-                    ['rows', { name: 'Rows', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
-                    ['squats', { name: 'Squats', sets: 4, reps: 12, completed: 0, currentSet: 1 }]
-                ]);
-
-                // Exercise detection
-                this.detector = new AdvancedExerciseDetector(this.currentExercise);
-                
-                // Voice & AI systems
-                this.voiceCoach = new VoiceCoach();
-                this.insightSystem = new VisualInsightSystem();
-                
-                // UI state
-                this.isVoiceActive = false;
-                this.currentIntensity = 'moderate';
-            }
-
-            setupEventHandlers() {
-                // Control buttons
-                document.getElementById('btnStart').onclick = () => this.start();
-                document.getElementById('btnStop').onclick = () => this.stop();
-                document.getElementById('btnCompleteSet').onclick = () => this.completeSet();
-                document.getElementById('btnSkipExercise').onclick = () => this.skipExercise();
-                document.getElementById('btnToggleVoice').onclick = () => this.toggleVoice();
-                document.getElementById('btnResetWorkout').onclick = () => this.resetWorkout();
-
-                // Exercise selection
-                document.querySelectorAll('.exercise-card').forEach(card => {
-                    card.onclick = () => {
-                        if (this.running) {
-                            const exercise = card.dataset.exercise;
-                            this.switchExercise(exercise);
-                        }
-                    };
-                });
-
-                // Voice controls
-                document.getElementById('voiceToggle').onclick = () => this.toggleVoiceChat();
-                document.getElementById('intensitySelect').onchange = (e) => {
-                    this.currentIntensity = e.target.value;
-                    this.voiceCoach.updateIntensity(this.currentIntensity);
-                };
-            }
-
-            async initializeApp() {
-                try {
-                    // Initialize MediaPipe
-                    const fileset = await FilesetResolver.forVisionTasks(
-                        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
-                    );
-                    
-                    this.landmarker = await PoseLandmarker.createFromOptions(fileset, {
-                        baseOptions: {
-                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
-                        },
-                        runningMode: "VIDEO",
-                        numPoses: 1,
-                        minPoseDetectionConfidence: 0.5,
-                        minPoseTrackingConfidence: 0.5
-                    });
-
-                    // Hide loading overlay
-                    document.getElementById('loadingOverlay').classList.add('hidden');
-                    
-                    console.log('🚀 VelocityCoach AI initialized successfully');
-                    this.updateInsights([{
-                        type: 'system',
-                        severity: 'good',
-                        message: 'VelocityCoach AI Ready',
-                        recommendation: 'Click "Start Workout" to begin your training session',
-                        trend: 'stable'
-                    }]);
-
-                } catch (error) {
-                    console.error('Initialization failed:', error);
-                    this.showError('Failed to initialize AI systems. Please refresh and try again.');
-                }
-            }
-
-            async start() {
-                try {
-                    // Get camera access
-                    this.stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "user", width: 1280, height: 720 },
-                        audio: false
-                    });
-                    this.video.srcObject = this.stream;
-                    await this.video.play();
-
-                    this.running = true;
-                    this.updateUI('running');
-                    this.updateStatus('analyzing');
-                    
-                    // Start the main loop
-                    this.loop();
-                    
-                    // Start voice coach
-                    this.voiceCoach.onWorkoutStart();
-                    
-                    console.log('🏋️ Workout started');
-
-                } catch (error) {
-                    console.error('Failed to start:', error);
-                    this.showError('Camera access required. Please allow camera access and try again.');
-                }
-            }
-
-            loop() {
-                if (!this.running || !this.landmarker) return;
-
-                const w = this.video.videoWidth || 1280;
-                const h = this.video.videoHeight || 720;
-                this.canvas.width = w;
-                this.canvas.height = h;
-
-                const nowMs = performance.now();
-                const result = this.landmarker.detectForVideo(this.video, nowMs);
-
-                // Clear and draw video
-                this.ctx.clearRect(0, 0, w, h);
-                this.ctx.drawImage(this.video, 0, 0, w, h);
-
-                if (result.landmarks && result.landmarks[0]) {
-                    const landmarks = result.landmarks[0];
-                    
-                    // Draw pose
-                    this.drawPose(landmarks, w, h);
-                    
-                    // Process exercise
-                    const stepData = this.detector.step(landmarks, nowMs / 1000);
-                    
-                    // Update systems
-                    this.updateMetrics(stepData);
-                    this.updateInsights(this.insightSystem.analyze(stepData));
-                    this.voiceCoach.analyzeStep(stepData);
-                    
-                    // Update status
-                    this.updateStatus('recording');
-                    
-                } else {
-                    this.updateStatus('ready');
-                    this.drawNoPersonMessage();
-                }
-
-                if (this.running) {
-                    requestAnimationFrame(() => this.loop());
-                }
-            }
-
-            drawPose(landmarks, w, h) {
-                // Draw skeleton
-                const connections = [
-                    [11, 12], [11, 23], [12, 24], [23, 24], // torso
-                    [11, 13], [13, 15], [12, 14], [14, 16], // arms
-                    [23, 25], [25, 27], [24, 26], [26, 28], // legs
-                ];
-
-                this.ctx.lineWidth = 3;
-                this.ctx.strokeStyle = "rgba(80, 215, 255, 0.8)";
-                this.ctx.beginPath();
-                
-                connections.forEach(([a, b]) => {
-                    const pa = landmarks[a];
-                    const pb = landmarks[b];
-                    if (pa && pb && pa.visibility > 0.5 && pb.visibility > 0.5) {
-                        this.ctx.moveTo(pa.x * w, pa.y * h);
-                        this.ctx.lineTo(pb.x * w, pb.y * h);
-                    }
-                });
-                this.ctx.stroke();
-
-                // Highlight active joints for current exercise
-                this.highlightActiveJoints(landmarks, w, h);
-
-                // Draw joints
-                this.ctx.fillStyle = "rgba(34, 197, 94, 0.9)";
-                landmarks.forEach((point) => {
-                    if (point.visibility > 0.5) {
-                        this.ctx.beginPath();
-                        this.ctx.arc(point.x * w, point.y * h, 4, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                });
-            }
-
-            highlightActiveJoints(landmarks, w, h) {
-                const jointMappings = {
-                    shoulder_press: [12, 14, 16],
-                    lateral_raise: [12, 14],
-                    front_raise: [12, 14],
-                    rear_delt_fly: [12, 14],
-                    bicep_curl: [12, 14, 16],
-                    tricep_extension: [12, 14, 16],
-                    chest_press: [12, 14, 16],
-                    push_ups: [12, 14, 16],
-                    rows: [12, 14, 16],
-                    squats: [24, 26, 28]
-                };
-                
-                const joints = jointMappings[this.currentExercise] || [];
-                this.ctx.strokeStyle = "rgba(245, 158, 11, 1)";
-                this.ctx.lineWidth = 6;
-                this.ctx.beginPath();
-                
-                for (let i = 0; i < joints.length - 1; i++) {
-                    const p1 = landmarks[joints[i]];
-                    const p2 = landmarks[joints[i + 1]];
-                    if (p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
-                        this.ctx.moveTo(p1.x * w, p1.y * h);
-                        this.ctx.lineTo(p2.x * w, p2.y * h);
-                    }
-                }
-                this.ctx.stroke();
-            }
-
-            drawNoPersonMessage() {
-                this.ctx.fillStyle = "rgba(239, 68, 68, 0.9)";
-                this.ctx.font = "24px system-ui";
-                this.ctx.textAlign = "center";
-                this.ctx.fillText(
-                    "Position yourself in frame to begin",
-                    this.canvas.width / 2,
-                    this.canvas.height / 2
-                );
-                this.ctx.textAlign = "left";
-            }
-
-            updateMetrics(stepData) {
-                document.getElementById('repCount').textContent = stepData.reps || 0;
-                document.getElementById('metricAngle').textContent = `${Math.round(stepData.angle || 0)}°`;
-                document.getElementById('metricVelocity').textContent = stepData.velocity ? `${Math.round(stepData.velocity)}°/s` : '—';
-                document.getElementById('metricForm').textContent = Math.round(stepData.formScore || 100);
-                
-                const vlPercent = Math.round((stepData.velocityLoss || 0) * 100);
-                const vlElement = document.getElementById('metricVL');
-                vlElement.textContent = `${vlPercent}%`;
-                
-                // Update metric styling based on values
-                const formElement = document.getElementById('metricForm').parentElement;
-                const vlMetricElement = vlElement.parentElement;
-                
-                formElement.className = 'metric';
-                vlMetricElement.className = 'metric';
-                
-                if (stepData.formScore < 60) formElement.classList.add('critical');
-                else if (stepData.formScore < 80) formElement.classList.add('warning');
-                
-                if (vlPercent > 30) vlMetricElement.classList.add('critical');
-                else if (vlPercent > 20) vlMetricElement.classList.add('warning');
-            }
-
-            updateInsights(insights) {
-                const grid = document.getElementById('insightsGrid');
-                if (!insights || insights.length === 0) return;
-
-                // Show top 3 most important insights
-                const sortedInsights = insights.sort((a, b) => {
-                    const severityOrder = { critical: 0, warning: 1, good: 2 };
-                    return severityOrder[a.severity] - severityOrder[b.severity];
-                }).slice(0, 3);
-
-                grid.innerHTML = sortedInsights.map(insight => `
-                    <div class="insight-card ${insight.severity}">
-                        <div class="insight-header">
-                            <span class="insight-type ${insight.severity}">${insight.type}</span>
-                            <span class="insight-trend ${insight.trend || 'stable'}">${insight.trend || 'stable'}</span>
-                        </div>
-                        <div class="insight-message">${insight.message}</div>
-                        <div class="insight-recommendation">${insight.recommendation}</div>
-                    </div>
-                `).join('');
-            }
-
-            switchExercise(exerciseType) {
-                if (!this.exercises.has(exerciseType)) return;
-
-                this.currentExercise = exerciseType;
-                this.detector = new AdvancedExerciseDetector(exerciseType);
-                
-                // Update UI
-                document.querySelectorAll('.exercise-card').forEach(card => {
-                    card.classList.remove('active');
-                    if (card.dataset.exercise === exerciseType) {
-                        card.classList.add('active');
-                    }
-                });
-
-                const exercise = this.exercises.get(exerciseType);
-                document.getElementById('currentExerciseName').textContent = exercise.name;
-                document.getElementById('currentSetInfo').textContent = 
-                    `Set ${exercise.currentSet} of ${exercise.sets} • Target: ${exercise.reps} reps`;
-
-                this.voiceCoach.onExerciseStart(exerciseType);
-                console.log(`🔄 Switched to ${exercise.name}`);
-            }
-
-            completeSet() {
-                const exercise = this.exercises.get(this.currentExercise);
-                if (!exercise) return;
-
-                const stepData = this.detector.getStats();
-                exercise.completed++;
-                
-                if (exercise.completed >= exercise.sets) {
-                    // Exercise complete
-                    exercise.currentSet = exercise.sets;
-                    document.querySelector(`[data-exercise="${this.currentExercise}"]`).classList.add('completed');
-                    this.voiceCoach.onExerciseComplete(this.currentExercise);
-                    
-                    // Auto-advance to next exercise
-                    this.autoAdvanceExercise();
-                } else {
-                    // Next set
-                    exercise.currentSet = exercise.completed + 1;
-                }
-
-                this.updateExerciseProgress();
-                this.voiceCoach.onSetComplete(this.currentExercise, stepData);
-                this.detector.reset();
-
-                console.log(`✅ Set completed for ${exercise.name}`);
-            }
-
-            skipExercise() {
-                const exercise = this.exercises.get(this.currentExercise);
-                if (exercise) {
-                    exercise.completed = exercise.sets;
-                    exercise.currentSet = exercise.sets;
-                    document.querySelector(`[data-exercise="${this.currentExercise}"]`).classList.add('completed');
-                }
-                this.autoAdvanceExercise();
-            }
-
-            autoAdvanceExercise() {
-                const exerciseOrder = ['shoulder_press', 'lateral_raise', 'front_raise', 'rear_delt_fly', 
-                                     'bicep_curl', 'tricep_extension', 'chest_press', 'push_ups', 'rows', 'squats'];
-                
-                const currentIndex = exerciseOrder.indexOf(this.currentExercise);
-                
-                for (let i = currentIndex + 1; i < exerciseOrder.length; i++) {
-                    const nextExercise = exerciseOrder[i];
-                    const exercise = this.exercises.get(nextExercise);
-                    
-                    if (exercise && exercise.completed < exercise.sets) {
-                        this.switchExercise(nextExercise);
-                        return;
-                    }
-                }
-
-                // All exercises complete
-                this.onWorkoutComplete();
-            }
-
-            onWorkoutComplete() {
-                this.voiceCoach.onWorkoutComplete();
-                this.updateInsights([{
-                    type: 'celebration',
-                    severity: 'good',
-                    message: 'Workout Complete! 🎉',
-                    recommendation: 'Great job! Take time to stretch and hydrate.',
-                    trend: 'improving'
-                }]);
-                console.log('🎉 Workout completed!');
-            }
-
-            updateExerciseProgress() {
-                this.exercises.forEach((exercise, type) => {
-                    const card = document.querySelector(`[data-exercise="${type}"]`);
-                    if (card) {
-                        const progressText = card.querySelector('.exercise-progress');
-                        const progressFill = card.querySelector('.progress-fill');
-                        
-                        progressText.textContent = `Set ${exercise.currentSet}/${exercise.sets} • 0/${exercise.reps} reps`;
-                        
-                        const progress = (exercise.completed / exercise.sets) * 100;
-                        progressFill.style.width = `${progress}%`;
-                    }
-                });
-
-                // Update current exercise display
-                const exercise = this.exercises.get(this.currentExercise);
-                if (exercise) {
-                    document.getElementById('currentSetInfo').textContent = 
-                        `Set ${exercise.currentSet} of ${exercise.sets} • Target: ${exercise.reps} reps`;
-                }
-            }
-
-            async toggleVoice() {
-    try {
-        const enabled = await this.voiceCoach.toggle();
-        const btn = document.getElementById('btnToggleVoice');
+        // ===== FAST LOADING STRATEGY =====
         
-        if (enabled) {
-            btn.textContent = 'Voice: ON';
-            btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-            this.updateInsights([{
-                type: 'voice',
-                severity: 'good',
-                message: 'AI Voice Coach Connected',
-                recommendation: 'Voice coaching is now active',
-                trend: 'stable'
-            }]);
-        } else {
-            btn.textContent = 'Voice: OFF';
-            btn.style.background = 'linear-gradient(135deg, #21262d, #30363d)';
-            this.updateInsights([{
-                type: 'voice',
-                severity: 'warning',
-                message: 'AI Voice Coach Disconnected',
-                recommendation: 'Click to reconnect voice coaching',
-                trend: 'stable'
-            }]);
+        // 1. Progressive Enhancement - Start immediately with basic functionality
+        // 2. Background upgrading to full MediaPipe when ready
+        // 3. No blocking operations
+
+        console.log('🚀 VelocityCoach AI - Fast Loading Version');
+
+        // Global state
+        let app;
+        const loadingStatus = document.getElementById('loadingStatus');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        function updateStatus(message) {
+            if (loadingStatus) loadingStatus.textContent = message;
+            console.log('Status:', message);
         }
+
+        // Hide loading immediately and start with basic functionality
+        updateStatus('Loading basic functionality...');
         
-        return enabled;
-    } catch (error) {
-        console.error('Error toggling voice:', error);
-        this.showError('Failed to toggle voice coach. Please try again.');
-        return false;
-    }
-}
-
-async toggleVoiceChat() {
-    try {
-        this.isVoiceActive = !this.isVoiceActive;
-        const indicator = document.getElementById('voiceIndicator');
-        const status = document.getElementById('voiceStatus');
-        const toggle = document.getElementById('voiceToggle');
-
-        if (this.isVoiceActive) {
-            // Start Vapi session
-            const success = await this.voiceCoach.initializeVapi();
+        setTimeout(() => {
+            updateStatus('Ready! Starting app...');
+            loadingOverlay?.classList.add('hidden');
             
-            if (success) {
-                indicator.classList.add('active');
-                status.textContent = 'Voice Chat Active';
-                toggle.textContent = 'Stop Voice';
-                toggle.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-                
-                // Send test message
-                await this.voiceCoach.sendMessage('Voice chat is now active. I\'m here to help with your workout.');
-            } else {
-                this.isVoiceActive = false;
-                this.showError('Failed to start voice chat. Please check your connection.');
+            // Start app immediately with basic mode
+            app = new VelocityCoachAI();
+            window.velocityCoachAI = app;
+            
+            // Begin MediaPipe upgrade in background
+            app.upgradeToAdvancedMode();
+        }, 500);
+
+        // ===== UTILITY FUNCTIONS =====
+        
+        function calculateAngle(a, b, c) {
+            const ba = [a.x - b.x, a.y - b.y];
+            const bc = [c.x - b.x, c.y - b.y];
+            const dotProduct = ba[0] * bc[0] + ba[1] * bc[1];
+            const magnitudeBA = Math.sqrt(ba[0] ** 2 + ba[1] ** 2);
+            const magnitudeBC = Math.sqrt(bc[0] ** 2 + bc[1] ** 2);
+            if (magnitudeBA === 0 || magnitudeBC === 0) return 0;
+            const cosineAngle = dotProduct / (magnitudeBA * magnitudeBC);
+            const clampedCosine = Math.max(-1, Math.min(1, cosineAngle));
+            return Math.acos(clampedCosine) * (180 / Math.PI);
+        }
+
+        function smoothAngle(newAngle, angleHistory, windowSize = 5) {
+            angleHistory.push(newAngle);
+            if (angleHistory.length > windowSize) angleHistory.shift();
+            const sorted = [...angleHistory].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            if (Math.abs(newAngle - median) > 30) return median;
+            let weightedSum = 0, totalWeight = 0;
+            angleHistory.forEach((angle, index) => {
+                const weight = index + 1;
+                weightedSum += angle * weight;
+                totalWeight += weight;
+            });
+            return weightedSum / totalWeight;
+        }
+
+        // ===== ENHANCED EXERCISE DETECTORS =====
+
+        class EnhancedSquatDetector {
+            constructor() {
+                this.counter = 0;
+                this.stage = 'initial';
+                this.lastAngle = 0;
+                this.lastTime = 0;
+                this.velocity = 0;
+                this.angleHistory = [];
+                this.velocityHistory = [];
+                this.baseline = null;
             }
-        } else {
-            // Stop Vapi session
-            await this.voiceCoach.stopVapi();
-            indicator.classList.remove('active');
-            status.textContent = 'Voice Ready';
-            toggle.textContent = 'Start Voice';
-            toggle.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)';
+
+            step(landmarks, timestamp, frameWidth, frameHeight) {
+                if (!this.areLandmarksVisible(landmarks, [11, 23, 25, 12, 24, 26])) {
+                    return this.getDefaultResult();
+                }
+
+                const shoulderLeft = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                const hipLeft = this.landmarkToPoint(landmarks[23], frameWidth, frameHeight);
+                const kneeLeft = this.landmarkToPoint(landmarks[25], frameWidth, frameHeight);
+                const shoulderRight = this.landmarkToPoint(landmarks[12], frameWidth, frameHeight);
+                const hipRight = this.landmarkToPoint(landmarks[24], frameWidth, frameHeight);
+                const kneeRight = this.landmarkToPoint(landmarks[26], frameWidth, frameHeight);
+
+                const angleLeft = calculateAngle(shoulderLeft, hipLeft, kneeLeft);
+                const angleRight = calculateAngle(shoulderRight, hipRight, kneeRight);
+                const currentAngle = (angleLeft + angleRight) / 2;
+                const smoothedAngle = smoothAngle(currentAngle, this.angleHistory);
+
+                if (this.lastTime > 0) {
+                    const dt = Math.max(1e-3, timestamp - this.lastTime);
+                    this.velocity = (smoothedAngle - this.lastAngle) / dt;
+                    if (Math.abs(this.velocity) > 5) {
+                        this.velocityHistory.push(Math.abs(this.velocity));
+                        if (this.velocityHistory.length > 15) this.velocityHistory.shift();
+                        if (!this.baseline && this.velocityHistory.length >= 3) {
+                            this.baseline = this.velocityHistory.slice(0, 3).reduce((a, b) => a + b) / 3;
+                        }
+                    }
+                }
+
+                const isNewRep = this.updateSquatState(smoothedAngle);
+                const formScore = this.calculateFormScore(smoothedAngle, angleLeft, angleRight);
+                const velocityLoss = this.calculateVelocityLoss();
+                const warnings = this.generateWarnings(smoothedAngle, angleLeft, angleRight);
+
+                this.lastAngle = smoothedAngle;
+                this.lastTime = timestamp;
+
+                return {
+                    reps: this.counter,
+                    angle: smoothedAngle,
+                    velocity: this.velocity,
+                    state: this.stage,
+                    isNewRep,
+                    formScore,
+                    velocityLoss,
+                    warnings
+                };
+            }
+
+            updateSquatState(angle) {
+                let isNewRep = false;
+                switch (this.stage) {
+                    case 'initial':
+                    case 'starting_position':
+                        if (angle > 170) {
+                            this.stage = 'starting_position';
+                        } else if (angle > 90 && angle <= 170) {
+                            this.stage = 'descent';
+                        }
+                        break;
+                    case 'descent':
+                        if (angle < 90) {
+                            this.stage = 'ascent';
+                            this.counter++;
+                            isNewRep = true;
+                        }
+                        break;
+                    case 'ascent':
+                        if (angle > 170) {
+                            this.stage = 'starting_position';
+                        }
+                        break;
+                }
+                return isNewRep;
+            }
+
+            calculateFormScore(angle, angleLeft, angleRight) {
+                let score = 100;
+                if (Math.abs(this.velocity) > 150) score -= 20;
+                else if (Math.abs(this.velocity) > 100) score -= 10;
+                if (angle < 90) score += 10;
+                else if (angle > 150) score -= 15;
+                const angleDifference = Math.abs(angleLeft - angleRight);
+                if (angleDifference > 15) score -= 20;
+                return Math.max(0, Math.min(100, score));
+            }
+
+            generateWarnings(angle, angleLeft, angleRight) {
+                const warnings = [];
+                const angleDifference = Math.abs(angleLeft - angleRight);
+                if (angleDifference > 15) {
+                    warnings.push(`Leg imbalance: ${angleDifference.toFixed(1)}° difference`);
+                }
+                if (this.stage === 'descent' && angle > 110) {
+                    warnings.push('Go deeper for better squat form');
+                }
+                return warnings;
+            }
+
+            calculateVelocityLoss() {
+                if (!this.baseline || this.velocityHistory.length < 5) return 0;
+                const recent = this.velocityHistory.slice(-3).reduce((a, b) => a + b) / 3;
+                return Math.max(0, (this.baseline - recent) / this.baseline);
+            }
+
+            areLandmarksVisible(landmarks, indices, threshold = 0.5) {
+                return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+            }
+
+            landmarkToPoint(landmark, frameWidth, frameHeight) {
+                return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+            }
+
+            getDefaultResult() {
+                return {
+                    reps: this.counter, angle: this.lastAngle, velocity: 0, state: this.stage,
+                    isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                };
+            }
+
+            reset() {
+                this.counter = 0;
+                this.stage = 'initial';
+                this.angleHistory = [];
+                this.velocityHistory = [];
+                this.baseline = null;
+            }
         }
-    } catch (error) {
-        console.error('Error with voice chat:', error);
-        this.showError('Voice chat error. Please try again.');
-        this.isVoiceActive = false;
-    }
-}
+                    // Add these new enhanced detectors:
+            class EnhancedLateralRaiseDetector {
+                constructor() {
+                    this.counter = 0;
+                    this.stage = 'down';
+                    this.angleHistory = [];
+                }
 
-resetWorkout() {
-    this.exercises.forEach(exercise => {
-        exercise.completed = 0;
-        exercise.currentSet = 1;
-    });
-    
-    document.querySelectorAll('.exercise-card').forEach(card => {
-        card.classList.remove('completed', 'active');
-        if (card.dataset.exercise === 'shoulder_press') {
-            card.classList.add('active');
+                step(landmarks, timestamp, frameWidth, frameHeight) {
+                    if (!this.areLandmarksVisible(landmarks, [11, 13])) {
+                        return this.getDefaultResult();
+                    }
+
+                    const shoulder = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                    const elbow = this.landmarkToPoint(landmarks[13], frameWidth, frameHeight);
+                    
+                    const angle = this.calculateArmElevationAngle(shoulder, elbow);
+                    const smoothedAngle = this.smoothAngle(angle, this.angleHistory);
+
+                    const isNewRep = this.updateState(smoothedAngle);
+
+                    return {
+                        reps: this.counter,
+                        angle: smoothedAngle,
+                        velocity: 0,
+                        state: this.stage,
+                        isNewRep,
+                        formScore: 90, // Liberal scoring
+                        velocityLoss: 0,
+                        warnings: []
+                    };
+                }
+
+                updateState(angle) {
+                    let isNewRep = false;
+                    
+                    // Very liberal thresholds
+                    if (this.stage === 'down' && angle > 30) { // Lower threshold
+                        this.stage = 'up';
+                    } else if (this.stage === 'up' && angle < 20) { // Lower threshold
+                        this.stage = 'down';
+                        this.counter++;
+                        isNewRep = true;
+                    }
+                    
+                    return isNewRep;
+                }
+
+                calculateArmElevationAngle(shoulder, elbow) {
+                    const armVector = [elbow.x - shoulder.x, elbow.y - shoulder.y];
+                    let angle = Math.atan2(-armVector[1], Math.abs(armVector[0])) * (180 / Math.PI);
+                    return Math.max(0, Math.min(90, angle));
+                }
+
+                smoothAngle(newAngle, angleHistory, windowSize = 3) {
+                    angleHistory.push(newAngle);
+                    if (angleHistory.length > windowSize) angleHistory.shift();
+                    return angleHistory.reduce((a, b) => a + b) / angleHistory.length;
+                }
+
+                areLandmarksVisible(landmarks, indices, threshold = 0.3) {
+                    return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+                }
+
+                landmarkToPoint(landmark, frameWidth, frameHeight) {
+                    return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+                }
+
+                getDefaultResult() {
+                    return {
+                        reps: this.counter, angle: 0, velocity: 0, state: this.stage,
+                        isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                    };
+                }
+
+                reset() {
+                    this.counter = 0;
+                    this.stage = 'down';
+                    this.angleHistory = [];
+                }
+            }
+
+            class EnhancedTricepExtensionDetector {
+                constructor() {
+                    this.counter = 0;
+                    this.stage = 'extended';
+                    this.angleHistory = [];
+                }
+
+                step(landmarks, timestamp, frameWidth, frameHeight) {
+                    if (!this.areLandmarksVisible(landmarks, [11, 13, 15])) {
+                        return this.getDefaultResult();
+                    }
+
+                    const shoulder = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                    const elbow = this.landmarkToPoint(landmarks[13], frameWidth, frameHeight);
+                    const wrist = this.landmarkToPoint(landmarks[15], frameWidth, frameHeight);
+                    
+                    const angle = calculateAngle(shoulder, elbow, wrist);
+                    const smoothedAngle = this.smoothAngle(angle, this.angleHistory);
+
+                    const isNewRep = this.updateState(smoothedAngle);
+
+                    return {
+                        reps: this.counter,
+                        angle: smoothedAngle,
+                        velocity: 0,
+                        state: this.stage,
+                        isNewRep,
+                        formScore: 85,
+                        velocityLoss: 0,
+                        warnings: []
+                    };
+                }
+
+                updateState(angle) {
+                    let isNewRep = false;
+                    
+                    // Liberal thresholds for tricep extension
+                    if (this.stage === 'extended' && angle < 120) { // Lower threshold
+                        this.stage = 'flexed';
+                    } else if (this.stage === 'flexed' && angle > 140) { // Lower threshold
+                        this.stage = 'extended';
+                        this.counter++;
+                        isNewRep = true;
+                    }
+                    
+                    return isNewRep;
+                }
+
+                smoothAngle(newAngle, angleHistory, windowSize = 3) {
+                    angleHistory.push(newAngle);
+                    if (angleHistory.length > windowSize) angleHistory.shift();
+                    return angleHistory.reduce((a, b) => a + b) / angleHistory.length;
+                }
+
+                areLandmarksVisible(landmarks, indices, threshold = 0.3) {
+                    return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+                }
+
+                landmarkToPoint(landmark, frameWidth, frameHeight) {
+                    return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+                }
+
+                getDefaultResult() {
+                    return {
+                        reps: this.counter, angle: 0, velocity: 0, state: this.stage,
+                        isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                    };
+                }
+
+                reset() {
+                    this.counter = 0;
+                    this.stage = 'extended';
+                    this.angleHistory = [];
+                }
+            }
+
+            class EnhancedShoulderPressDetector {
+                constructor() {
+                    this.counter = 0;
+                    this.stage = 'down';
+                    this.angleHistory = [];
+                }
+
+                step(landmarks, timestamp, frameWidth, frameHeight) {
+                    if (!this.areLandmarksVisible(landmarks, [11, 13, 15])) {
+                        return this.getDefaultResult();
+                    }
+
+                    const shoulder = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                    const elbow = this.landmarkToPoint(landmarks[13], frameWidth, frameHeight);
+                    const wrist = this.landmarkToPoint(landmarks[15], frameWidth, frameHeight);
+                    
+                    const angle = calculateAngle(shoulder, elbow, wrist);
+                    const smoothedAngle = this.smoothAngle(angle, this.angleHistory);
+
+                    const isNewRep = this.updateState(smoothedAngle);
+
+                    return {
+                        reps: this.counter,
+                        angle: smoothedAngle,
+                        velocity: 0,
+                        state: this.stage,
+                        isNewRep,
+                        formScore: 88,
+                        velocityLoss: 0,
+                        warnings: []
+                    };
+                }
+
+                updateState(angle) {
+                    let isNewRep = false;
+                    
+                    // Liberal thresholds for shoulder press
+                    if (this.stage === 'down' && angle > 130) { // Liberal threshold
+                        this.stage = 'up';
+                    } else if (this.stage === 'up' && angle < 100) { // Liberal threshold
+                        this.stage = 'down';
+                        this.counter++;
+                        isNewRep = true;
+                    }
+                    
+                    return isNewRep;
+                }
+
+                smoothAngle(newAngle, angleHistory, windowSize = 3) {
+                    angleHistory.push(newAngle);
+                    if (angleHistory.length > windowSize) angleHistory.shift();
+                    return angleHistory.reduce((a, b) => a + b) / angleHistory.length;
+                }
+
+                areLandmarksVisible(landmarks, indices, threshold = 0.3) {
+                    return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+                }
+
+                landmarkToPoint(landmark, frameWidth, frameHeight) {
+                    return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+                }
+
+                getDefaultResult() {
+                    return {
+                        reps: this.counter, angle: 0, velocity: 0, state: this.stage,
+                        isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                    };
+                }
+
+                reset() {
+                    this.counter = 0;
+                    this.stage = 'down';
+                    this.angleHistory = [];
+                }
+            }
+
+            class EnhancedRowsDetector {
+                constructor() {
+                    this.counter = 0;
+                    this.stage = 'extended';
+                    this.angleHistory = [];
+                }
+
+                step(landmarks, timestamp, frameWidth, frameHeight) {
+                    if (!this.areLandmarksVisible(landmarks, [11, 13, 15])) {
+                        return this.getDefaultResult();
+                    }
+
+                    const shoulder = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                    const elbow = this.landmarkToPoint(landmarks[13], frameWidth, frameHeight);
+                    const wrist = this.landmarkToPoint(landmarks[15], frameWidth, frameHeight);
+                    
+                    const angle = calculateAngle(shoulder, elbow, wrist);
+                    const smoothedAngle = this.smoothAngle(angle, this.angleHistory);
+
+                    const isNewRep = this.updateState(smoothedAngle);
+
+                    return {
+                        reps: this.counter,
+                        angle: smoothedAngle,
+                        velocity: 0,
+                        state: this.stage,
+                        isNewRep,
+                        formScore: 87,
+                        velocityLoss: 0,
+                        warnings: []
+                    };
+                }
+
+                updateState(angle) {
+                    let isNewRep = false;
+                    
+                    // Liberal thresholds for rows (reverse movement)
+                    if (this.stage === 'extended' && angle < 110) { // Liberal threshold
+                        this.stage = 'pulled';
+                    } else if (this.stage === 'pulled' && angle > 130) { // Liberal threshold
+                        this.stage = 'extended';
+                        this.counter++;
+                        isNewRep = true;
+                    }
+                    
+                    return isNewRep;
+                }
+
+                smoothAngle(newAngle, angleHistory, windowSize = 3) {
+                    angleHistory.push(newAngle);
+                    if (angleHistory.length > windowSize) angleHistory.shift();
+                    return angleHistory.reduce((a, b) => a + b) / angleHistory.length;
+                }
+
+                areLandmarksVisible(landmarks, indices, threshold = 0.3) {
+                    return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+                }
+
+                landmarkToPoint(landmark, frameWidth, frameHeight) {
+                    return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+                }
+
+                getDefaultResult() {
+                    return {
+                        reps: this.counter, angle: 0, velocity: 0, state: this.stage,
+                        isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                    };
+                }
+
+                reset() {
+                    this.counter = 0;
+                    this.stage = 'extended';
+                    this.angleHistory = [];
+                }
+            }
+
+        class EnhancedBicepCurlDetector {
+            constructor() {
+                this.counterRight = 0;
+                this.counterLeft = 0;
+                this.stageRight = 'initial';
+                this.stageLeft = 'initial';
+                this.ANGLE_THRESHOLD = 40;
+                this.ANGLE_THRESHOLD_UP = 155;
+                this.ANGLE_THRESHOLD_DOWN = 47;
+            }
+
+            step(landmarks, timestamp, frameWidth, frameHeight) {
+                if (!this.areLandmarksVisible(landmarks, [11, 13, 15, 12, 14, 16, 23, 24])) {
+                    return this.getDefaultResult();
+                }
+
+                const shoulderRight = this.landmarkToPoint(landmarks[11], frameWidth, frameHeight);
+                const elbowRight = this.landmarkToPoint(landmarks[13], frameWidth, frameHeight);
+                const wristRight = this.landmarkToPoint(landmarks[15], frameWidth, frameHeight);
+                const hipRight = this.landmarkToPoint(landmarks[23], frameWidth, frameHeight);
+
+                const shoulderLeft = this.landmarkToPoint(landmarks[12], frameWidth, frameHeight);
+                const elbowLeft = this.landmarkToPoint(landmarks[14], frameWidth, frameHeight);
+                const wristLeft = this.landmarkToPoint(landmarks[16], frameWidth, frameHeight);
+                const hipLeft = this.landmarkToPoint(landmarks[24], frameWidth, frameHeight);
+
+                const angleRightCounter = calculateAngle(shoulderRight, elbowRight, wristRight);
+                const angleLeftCounter = calculateAngle(shoulderLeft, elbowLeft, wristLeft);
+                const angleRightForm = calculateAngle(shoulderRight, elbowRight, hipRight);
+                const angleLeftForm = calculateAngle(shoulderLeft, elbowLeft, hipLeft);
+
+                const isNewRepRight = this.updateCurlState('right', angleRightCounter);
+                const isNewRepLeft = this.updateCurlState('left', angleLeftCounter);
+
+                const warnings = this.generateWarnings(angleRightForm, angleLeftForm);
+                const primaryAngle = Math.max(angleRightCounter, angleLeftCounter);
+                const totalReps = Math.max(this.counterRight, this.counterLeft);
+
+                return {
+                    reps: totalReps,
+                    angle: primaryAngle,
+                    velocity: 0,
+                    state: this.stageRight,
+                    isNewRep: isNewRepRight || isNewRepLeft,
+                    formScore: this.calculateFormScore(angleRightForm, angleLeftForm),
+                    velocityLoss: 0,
+                    warnings
+                };
+            }
+
+            updateCurlState(arm, angle) {
+                const isRight = arm === 'right';
+                let counter = isRight ? this.counterRight : this.counterLeft;
+                let stage = isRight ? this.stageRight : this.stageLeft;
+                let isNewRep = false;
+
+                if (angle > this.ANGLE_THRESHOLD_UP) {
+                    stage = 'flex';
+                } else if (this.ANGLE_THRESHOLD_DOWN < angle && angle < this.ANGLE_THRESHOLD_UP && stage === 'flex') {
+                    stage = 'up';
+                } else if (angle < this.ANGLE_THRESHOLD_DOWN && stage === 'up') {
+                    stage = 'down';
+                    counter++;
+                    isNewRep = true;
+                }
+
+                if (isRight) {
+                    this.counterRight = counter;
+                    this.stageRight = stage;
+                } else {
+                    this.counterLeft = counter;
+                    this.stageLeft = stage;
+                }
+
+                return isNewRep;
+            }
+
+            calculateFormScore(angleRightForm, angleLeftForm) {
+                let score = 100;
+                if (Math.abs(angleRightForm) > this.ANGLE_THRESHOLD) score -= 25;
+                if (Math.abs(angleLeftForm) > this.ANGLE_THRESHOLD) score -= 25;
+                return Math.max(0, score);
+            }
+
+            generateWarnings(angleRightForm, angleLeftForm) {
+                const warnings = [];
+                if (Math.abs(angleRightForm) > this.ANGLE_THRESHOLD) {
+                    warnings.push(`Right shoulder-elbow-hip misalignment: ${angleRightForm.toFixed(1)}°`);
+                }
+                if (Math.abs(angleLeftForm) > this.ANGLE_THRESHOLD) {
+                    warnings.push(`Left shoulder-elbow-hip misalignment: ${angleLeftForm.toFixed(1)}°`);
+                }
+                return warnings;
+            }
+
+            areLandmarksVisible(landmarks, indices, threshold = 0.5) {
+                return indices.every(idx => landmarks[idx] && (landmarks[idx].visibility ?? 1) > threshold);
+            }
+
+            landmarkToPoint(landmark, frameWidth, frameHeight) {
+                return { x: landmark.x * frameWidth, y: landmark.y * frameHeight };
+            }
+
+            getDefaultResult() {
+                return {
+                    reps: Math.max(this.counterRight, this.counterLeft), angle: 0, velocity: 0, state: this.stageRight,
+                    isNewRep: false, formScore: 0, velocityLoss: 0, warnings: ['Position yourself in frame']
+                };
+            }
+
+            reset() {
+                this.counterRight = 0;
+                this.counterLeft = 0;
+                this.stageRight = 'initial';
+                this.stageLeft = 'initial';
+            }
         }
-    });
 
-    this.currentExercise = 'shoulder_press';
-    this.detector = new AdvancedExerciseDetector(this.currentExercise);
-    this.updateExerciseProgress();
-    
-    console.log('🔄 Workout reset');
-}
-
-updateStatus(status) {
-    const badge = document.getElementById('statusBadge');
-    badge.className = `status-badge ${status}`;
-    badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-updateUI(state) {
-    const startBtn = document.getElementById('btnStart');
-    const stopBtn = document.getElementById('btnStop');
-    
-    startBtn.disabled = state === 'running';
-    stopBtn.disabled = state !== 'running';
-}
-
-stop() {
-    this.running = false;
-    
-    if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-    }
-    
-    this.landmarker = undefined;
-    
-    // Stop voice coach properly with Vapi
-    this.voiceCoach.stopVapi();
-    
-    this.updateUI('stopped');
-    this.updateStatus('ready');
-    
-    console.log('🛑 Workout stopped');
-}
-
-showError(message) {
-    this.updateInsights([{
-        type: 'error',
-        severity: 'critical',
-        message: 'Error: ' + message,
-        recommendation: 'Please check your setup and try again',
-        trend: 'stable'
-    }]);
-
-    // If it's a voice error, also try to reset voice state
-    if (message.toLowerCase().includes('voice')) {
-        this.isVoiceActive = false;
-        document.getElementById('voiceIndicator')?.classList.remove('active');
-    }
-}
-
-// Add these new methods to your VelocityCoachAI class:
-
-async sendVoiceMessage(message) {
-    try {
-        await this.voiceCoach.sendMessage(message, 'user');
-    } catch (error) {
-        console.error('Error sending voice message:', error);
-    }
-}
-
-updateVoiceStatus() {
-    const status = this.voiceCoach.getStatus();
-    
-    // Update voice indicator
-    const indicator = document.getElementById('voiceIndicator');
-    if (status.vapiActive) {
-        indicator.classList.add('active');
-    } else {
-        indicator.classList.remove('active');
-    }
-
-    // Update intensity display
-    const intensitySelect = document.getElementById('intensitySelect');
-    if (intensitySelect.value !== status.intensity) {
-        intensitySelect.value = status.intensity;
-    }
-
-    // Show queue status in console for debugging
-    if (status.queueLength > 0) {
-        console.log(`Voice queue: ${status.queueLength} messages pending`);
-    }
-}}
-        // Advanced Exercise Detector
-          class AdvancedExerciseDetector {
+        // Basic Exercise Detector for fallback
+        class BasicExerciseDetector {
             constructor(exerciseType) {
                 this.exerciseType = exerciseType;
                 this.reps = 0;
@@ -1431,7 +1544,6 @@ updateVoiceStatus() {
 
                 const velocity = this.lastTime > 0 ? (angle - this.lastAngle) / (timestamp - this.lastTime) : 0;
                 
-                // Track velocity for VBT
                 if (Math.abs(velocity) > 5) {
                     this.velocityHistory.push(Math.abs(velocity));
                     if (this.velocityHistory.length > 15) this.velocityHistory.shift();
@@ -1456,7 +1568,8 @@ updateVoiceStatus() {
                     isNewRep,
                     velocityLoss,
                     formScore: this.formScore,
-                    exercise: this.exerciseType
+                    exercise: this.exerciseType,
+                    warnings: []
                 };
             }
 
@@ -1466,18 +1579,14 @@ updateVoiceStatus() {
                     lateral_raise: [12, 14],
                     front_raise: [12, 14],
                     rear_delt_fly: [12, 14],
-                    bicep_curl: [12, 14, 16],
                     tricep_extension: [12, 14, 16],
                     chest_press: [12, 14, 16],
-                    push_ups: [12, 14, 16],
-                    rows: [12, 14, 16],
-                    squats: [24, 26, 28]
+                    rows: [12, 14, 16]
                 };
 
                 const joints = jointMappings[this.exerciseType] || [12, 14, 16];
                 
                 if (joints.length === 2) {
-                    // Arm elevation angle for raises
                     const shoulder = landmarks[joints[0]];
                     const elbow = landmarks[joints[1]];
                     if (!shoulder || !elbow || shoulder.visibility < 0.5 || elbow.visibility < 0.5) return 0;
@@ -1486,7 +1595,6 @@ updateVoiceStatus() {
                     let angle = Math.atan2(-armVector[1], Math.abs(armVector[0])) * (180 / Math.PI);
                     return Math.max(0, Math.min(90, angle));
                 } else {
-                    // Three-joint angle calculation
                     const [j1, j2, j3] = joints.map(i => landmarks[i]);
                     if (!j1 || !j2 || !j3 || j1.visibility < 0.5 || j2.visibility < 0.5 || j3.visibility < 0.5) return 0;
 
@@ -1507,12 +1615,9 @@ updateVoiceStatus() {
                     lateral_raise: { start: 15, end: 75, isReversed: false },
                     front_raise: { start: 15, end: 75, isReversed: false },
                     rear_delt_fly: { start: 20, end: 70, isReversed: false },
-                    bicep_curl: { start: 155, end: 40, isReversed: true },
                     tricep_extension: { start: 45, end: 160, isReversed: false },
                     chest_press: { start: 90, end: 170, isReversed: false },
-                    push_ups: { start: 70, end: 160, isReversed: false },
-                    rows: { start: 160, end: 80, isReversed: true },
-                    squats: { start: 170, end: 90, isReversed: true }
+                    rows: { start: 160, end: 80, isReversed: true }
                 };
 
                 const config = thresholds[this.exerciseType] || { start: 90, end: 160, isReversed: false };
@@ -1555,41 +1660,19 @@ updateVoiceStatus() {
 
             calculateFormScore(angle, velocity) {
                 let score = 100;
-                
-                // Penalize excessive velocity
                 if (Math.abs(velocity) > 200) score -= 25;
                 else if (Math.abs(velocity) > 150) score -= 15;
-                
-                // Penalize poor range of motion
-                const thresholds = {
-                    shoulder_press: { min: 60, ideal: 80 },
-                    lateral_raise: { min: 50, ideal: 70 },
-                    bicep_curl: { min: 80, ideal: 110 }
-                };
-                
-                const config = thresholds[this.exerciseType];
-                if (config && angle < config.min) {
-                    score -= 20;
-                } else if (config && angle < config.ideal) {
-                    score -= 10;
-                }
-                
                 return Math.max(0, Math.min(100, score));
             }
 
             getDefaultResult() {
                 return {
-                    reps: this.reps,
-                    angle: 0,
-                    velocity: 0,
-                    state: this.state,
-                    isNewRep: false,
-                    velocityLoss: 0,
-                    formScore: this.formScore,
-                    exercise: this.exerciseType
+                    reps: this.reps, angle: 0, velocity: 0, state: this.state,
+                    isNewRep: false, velocityLoss: 0, formScore: this.formScore, exercise: this.exerciseType,
+                    warnings: ['Position yourself in frame']
                 };
             }
-
+            
             reset() {
                 this.reps = 0;
                 this.state = 'idle';
@@ -1597,748 +1680,954 @@ updateVoiceStatus() {
                 this.baseline = null;
                 this.formScore = 100;
             }
-
-            getStats() {
-                return {
-                    reps: this.reps,
-                    velocityLoss: this.calculateVelocityLoss(),
-                    avgVelocity: this.velocityHistory.length ? 
-                        this.velocityHistory.reduce((a, b) => a + b) / this.velocityHistory.length : 0,
-                    peakVelocity: this.velocityHistory.length ? Math.max(...this.velocityHistory) : 0,
-                    formScore: this.formScore
-                };
-            }
         }
 
         // Voice Coach System
-        // Voice Coach System with Vapi Integration
-import { startCoach, stopCoach, sendCoachSignal } from '/src/vapi-coach.js';
+        // Replace the entire VoiceCoach class (around line 1100) with:
+    class VAPICoach {
+        constructor() {
+            this.startCoach = null;
+            this.stopCoach = null;
+            this.sendCoachSignal = null;
+            this.isEnabled = false;
+            this.isConnected = false;
+            this.messageQueue = [];
+            this.intensityThresholds = {
+                light: 0.20,
+                moderate: 0.25,
+                intense: 0.40
+            };
+            this.currentIntensity = 'moderate';
+            this.initializeVAPI();
+        }
 
-// Complete VoiceCoach class replacement with Vapi integration
-class VoiceCoach {
+        async initializeVAPI() {
+            try {
+                // Import VAPI functions from your working file
+                const { startCoach, stopCoach, sendCoachSignal } = await import('./src/vapi-coach.ts');
+                this.startCoach = startCoach;
+                this.stopCoach = stopCoach;
+                this.sendCoachSignal = sendCoachSignal;
+                console.log('VAPI functions loaded successfully');
+            } catch (error) {
+                console.error('Failed to initialize VAPI:', error);
+            }
+        }
+
+        async toggle() {
+            if (!this.startCoach || !this.stopCoach) {
+                console.error('VAPI functions not loaded');
+                return false;
+            }
+
+            if (this.isEnabled && this.isConnected) {
+                await this.stopCoach();
+                this.isEnabled = false;
+                this.isConnected = false;
+            } else {
+                try {
+                    await this.startCoach();
+                    this.isEnabled = true;
+                    this.isConnected = true;
+                } catch (error) {
+                    console.error('Failed to start VAPI:', error);
+                    this.isEnabled = false;
+                }
+            }
+            return this.isEnabled;
+        }
+
+        updateIntensity(intensity) {
+            this.currentIntensity = intensity;
+            this.sendMessage(`Training intensity set to ${intensity}.`);
+        }
+
+        analyzeStep(stepData) {
+            if (!this.isEnabled || !this.isConnected) return;
+
+            // Send exercise data to VAPI assistant
+            const message = {
+                type: 'exercise_data',
+                exercise: stepData.exercise,
+                reps: stepData.reps,
+                formScore: stepData.formScore,
+                velocityLoss: stepData.velocityLoss,
+                warnings: stepData.warnings,
+                isNewRep: stepData.isNewRep
+            };
+
+            this.sendMessage(JSON.stringify(message));
+        }
+
+        async sendMessage(content) {
+            if (!this.isConnected || !this.sendCoachSignal) return;
+            
+            try {
+                await this.sendCoachSignal(content, 'user');
+            } catch (error) {
+                console.error('Failed to send VAPI message:', error);
+            }
+        }
+
+        onWorkoutStart() {
+            this.sendMessage('Workout started. Provide motivation and guidance.');
+        }
+
+        onExerciseStart(exerciseType) {
+            this.sendMessage(`Starting ${exerciseType}. Provide form cues and encouragement.`);
+        }
+
+        onSetComplete(exerciseType, setData) {
+            this.sendMessage(`Set complete for ${exerciseType}. ${setData.reps} reps completed. Provide feedback.`);
+        }
+
+        onWorkoutComplete() {
+            this.sendMessage('Workout complete. Provide congratulations and recovery advice.');
+        }
+
+        getStatus() {
+            return { enabled: this.isEnabled, connected: this.isConnected, intensity: this.currentIntensity };
+        }
+
+        clearQueue() {
+            this.messageQueue = [];
+            if (this.isConnected && this.stopCoach) {
+                this.stopCoach();
+            }
+        }
+    }
+    // Insight System
+class VisualInsightSystem {
     constructor() {
-        this.isEnabled = false; // Start disabled, enable when Vapi connects
-        this.isVapiActive = false;
-        this.messageQueue = [];
-        this.lastSpoken = 0;
-        this.intensityThresholds = {
-            light: 0.20,
-            moderate: 0.25,
-            intense: 0.40
-        };
-        this.currentIntensity = 'moderate';
-        this.messageHistory = new Map();
-        this.MESSAGE_COOLDOWNS = {
-            'form_correction': 15000,
-            'velocity_warning': 20000,
-            'encouragement': 12000,
-            'set_complete': 5000,
-            'exercise_start': 3000,
-            'intensity_update': 2000,
-            'weight_adjustment': 5000
-        };
+        this.insights = [];
+    }
+
+    analyze(stepData) {
+        this.insights = [];
         
-        // Start message processor for queued messages
-        this.startMessageProcessor();
-    }
-
-    startMessageProcessor() {
-        setInterval(() => {
-            if (this.messageQueue.length > 0 && 
-                this.isVapiActive && 
-                Date.now() - this.lastSpoken > 5000) {
-                
-                const message = this.messageQueue.shift();
-                this.sendToVapi(message);
-            }
-        }, 1000);
-    }
-
-    async initializeVapi() {
-        try {
-            // Import the Vapi functions dynamically
-            const { startCoach, sendCoachSignal } = await import('/src/vapi-coach.js');
-            this.startCoach = startCoach;
-            this.sendCoachSignal = sendCoachSignal;
-            
-            await this.startCoach();
-            this.isVapiActive = true;
-            this.isEnabled = true;
-            console.log('Vapi voice coach initialized');
-            
-            // Send initial message
-            this.sendToVapi('Voice coach ready. Let\'s have a great workout.');
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize Vapi:', error);
-            this.isVapiActive = false;
-            this.isEnabled = false;
-            return false;
-        }
-    }
-
-    async stopVapi() {
-        try {
-            if (this.isVapiActive) {
-                const { stopCoach } = await import('/src/vapi-coach.js');
-                stopCoach();
-                this.isVapiActive = false;
-                this.isEnabled = false;
-                this.messageQueue = [];
-                console.log('Vapi voice coach stopped');
-            }
-        } catch (error) {
-            console.error('Error stopping Vapi:', error);
-        }
-    }
-
-    async sendToVapi(message, role = 'system') {
-        if (!this.isVapiActive || !this.isEnabled || !this.sendCoachSignal) return;
-
-        try {
-            await this.sendCoachSignal(message, role);
-            this.lastSpoken = Date.now();
-            console.log('Sent to Vapi:', message);
-        } catch (error) {
-            console.error('Error sending to Vapi:', error);
-            // Fallback: add back to queue for retry
-            if (this.messageQueue.length < 3) {
-                this.messageQueue.unshift(message);
-            }
-        }
-    }
-
-    updateIntensity(intensity) {
-        this.currentIntensity = intensity;
-        this.queueMessage(`Training intensity set to ${intensity}.`, 'intensity_update');
-    }
-
-    analyzeStep(stepData) {
-        if (!this.isVapiActive) return;
-
-        // VBT warnings
-        if (stepData.velocityLoss > this.intensityThresholds[this.currentIntensity]) {
-            const vlPercent = Math.round(stepData.velocityLoss * 100);
-            const threshold = Math.round(this.intensityThresholds[this.currentIntensity] * 100);
-            
-            if (stepData.velocityLoss > 0.35) {
-                this.queueMessage(
-                    `Stop immediately! Velocity loss at ${vlPercent}% is dangerously high. End this set now.`,
-                    'velocity_warning'
-                );
-            } else {
-                this.queueMessage(
-                    `Velocity loss at ${vlPercent}% exceeds your ${threshold}% threshold. Consider ending this set.`,
-                    'velocity_warning'
-                );
-            }
-        }
-
-        // Form coaching with specific feedback
-        if (stepData.formScore < 70 && stepData.reps > 0) {
-            const formMessages = [
-                'Focus on form. Control the movement.',
-                'Slow down and maintain proper technique.',
-                'Quality over speed. Focus on the muscle contraction.',
-                'Check your posture and range of motion.'
-            ];
-            const message = formMessages[Math.floor(Math.random() * formMessages.length)];
-            this.queueMessage(message, 'form_correction');
-        }
-
-        // Rep milestones and encouragement
-        if (stepData.isNewRep) {
-            if (stepData.reps % 5 === 0 && stepData.reps > 0) {
-                this.queueMessage(`${stepData.reps} reps completed. Keep pushing.`, 'encouragement');
-            } else if (stepData.reps === 1) {
-                this.queueMessage('First rep down. Find your rhythm.', 'encouragement');
-            }
-        }
-    }
-
-    onWorkoutStart() {
-        if (this.isVapiActive) {
-            this.sendToVapi('Workout started. I\'ll be your AI coach today. Let\'s achieve your fitness goals together.');
-        }
-    }
-
-    onExerciseStart(exerciseType) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const exerciseTips = {
-            shoulder_press: 'Keep your core tight and press straight up.',
-            lateral_raise: 'Raise your arms to shoulder height with control.',
-            front_raise: 'Lift with your shoulders, not your arms.',
-            rear_delt_fly: 'Squeeze your shoulder blades together.',
-            bicep_curl: 'Keep your elbows stable and control the weight.',
-            tricep_extension: 'Keep your upper arms still.',
-            chest_press: 'Control the weight on both the push and return.',
-            push_ups: 'Keep your body in a straight line.',
-            rows: 'Pull with your back muscles, not your arms.',
-            squats: 'Keep your chest up and knees over your toes.'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        const tip = exerciseTips[exerciseType] || 'Focus on proper form.';
-        
-        this.queueMessage(`Starting ${name}. ${tip}`, 'exercise_start');
-    }
-
-    onSetComplete(exerciseType, setData) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        let message = `${name} set complete. ${setData.reps} reps. Well done.`;
-
-        // Add performance feedback
-        if (setData.velocityLoss && setData.velocityLoss < 0.15) {
-            message += ' You maintained great power throughout the set.';
-        } else if (setData.formScore > 85) {
-            message += ' Excellent form on that set.';
-        }
-
-        this.queueMessage(message, 'set_complete');
-
-        // Weight adjustment recommendations
-        setTimeout(() => {
-            this.provideWeightGuidance(exerciseType, setData);
-        }, 3000);
-    }
-
-    provideWeightGuidance(exerciseType, setData) {
-        if (!setData.velocityLoss) return;
-
-        const threshold = this.intensityThresholds[this.currentIntensity];
-        const vl = setData.velocityLoss;
-        
-        if (vl < threshold - 0.05) {
-            this.queueMessage(
-                `Your velocity loss was only ${Math.round(vl * 100)}%. Consider adding 2.5 to 5 pounds for the next set to reach your target training zone.`,
-                'weight_adjustment'
-            );
-        } else if (vl > threshold + 0.05) {
-            this.queueMessage(
-                `High velocity loss at ${Math.round(vl * 100)}%. Consider reducing weight by 2.5 to 5 pounds next set.`,
-                'weight_adjustment'
-            );
+        // Form analysis
+        if (stepData.formScore < 50) {
+            this.insights.push({
+                type: 'form',
+                severity: 'critical',
+                message: `Form score: ${Math.round(stepData.formScore)}% - Needs immediate attention`,
+                recommendation: 'Stop and focus on proper technique. Consider reducing weight.',
+                trend: 'stable'
+            });
+        } else if (stepData.formScore < 75) {
+            this.insights.push({
+                type: 'form',
+                severity: 'warning',
+                message: `Form score: ${Math.round(stepData.formScore)}% - Room for improvement`,
+                recommendation: 'Slow down the movement and focus on control.',
+                trend: 'stable'
+            });
         } else {
-            this.queueMessage(
-                `Perfect velocity loss at ${Math.round(vl * 100)}%. You\'re right in your target training zone.`,
-                'weight_adjustment'
-            );
-        }
-    }
-
-    onExerciseComplete(exerciseType) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        this.sendToVapi(`${name} complete. Great work. Moving to the next exercise.`);
-    }
-
-    onWorkoutComplete() {
-        this.sendToVapi('Workout complete. Outstanding effort today! Remember to stretch and hydrate. I\'ll analyze your performance data.');
-        
-        // Stop Vapi session after workout
-        setTimeout(() => {
-            this.stopVapi();
-        }, 5000);
-    }
-
-    queueMessage(message, category = 'general') {
-        if (!this.isVapiActive) return;
-
-        // Check cooldown
-        const lastTime = this.messageHistory.get(category) || 0;
-        const cooldown = this.MESSAGE_COOLDOWNS[category] || 10000;
-        
-        if (Date.now() - lastTime < cooldown) {
-            return;
+            this.insights.push({
+                type: 'form',
+                severity: 'good',
+                message: `Form score: ${Math.round(stepData.formScore)}% - Excellent technique`,
+                recommendation: 'Maintain this quality throughout the set.',
+                trend: 'stable'
+            });
         }
 
-        // Avoid duplicates
-        if (this.messageQueue.includes(message)) {
-            return;
-        }
-
-        this.messageQueue.push(message);
-        this.messageHistory.set(category, Date.now());
-        
-        // Limit queue size
-        if (this.messageQueue.length > 3) {
-            this.messageQueue.shift();
-        }
-    }
-    startMessageProcessor() {
-        setInterval(() => {
-            if (this.messageQueue.length > 0 && 
-                this.isVapiActive && 
-                Date.now() - this.lastSpoken > 5000) {
-                
-                const message = this.messageQueue.shift();
-                this.sendToVapi(message);
-            }
-        }, 1000);
-    }
-
-    async initializeVapi() {
-        try {
-            await startCoach();
-            this.isVapiActive = true;
-            this.isEnabled = true;
-            console.log('Vapi voice coach initialized');
-            
-            // Send initial message
-            this.sendToVapi('Voice coach ready. Let\'s have a great workout.');
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize Vapi:', error);
-            this.isVapiActive = false;
-            this.isEnabled = false;
-            return false;
-        }
-    }
-
-    async stopVapi() {
-        try {
-            if (this.isVapiActive) {
-                stopCoach();
-                this.isVapiActive = false;
-                this.isEnabled = false;
-                this.messageQueue = [];
-                console.log('Vapi voice coach stopped');
-            }
-        } catch (error) {
-            console.error('Error stopping Vapi:', error);
-        }
-    }
-
-    async sendToVapi(message, role = 'system') {
-        if (!this.isVapiActive || !this.isEnabled) return;
-
-        try {
-            await sendCoachSignal(message, role);
-            this.lastSpoken = Date.now();
-            console.log('Sent to Vapi:', message);
-        } catch (error) {
-            console.error('Error sending to Vapi:', error);
-            // Fallback: add back to queue for retry
-            if (this.messageQueue.length < 3) {
-                this.messageQueue.unshift(message);
-            }
-        }
-    }
-
-    updateIntensity(intensity) {
-        this.currentIntensity = intensity;
-        this.queueMessage(`Training intensity set to ${intensity}.`, 'intensity_update');
-    }
-
-    analyzeStep(stepData) {
-        if (!this.isVapiActive) return;
-
-        // VBT warnings
-        if (stepData.velocityLoss > this.intensityThresholds[this.currentIntensity]) {
-            const vlPercent = Math.round(stepData.velocityLoss * 100);
-            const threshold = Math.round(this.intensityThresholds[this.currentIntensity] * 100);
-            
-            if (stepData.velocityLoss > 0.35) {
-                this.queueMessage(
-                    `Stop immediately! Velocity loss at ${vlPercent}% is dangerously high. End this set now.`,
-                    'velocity_warning'
-                );
-            } else {
-                this.queueMessage(
-                    `Velocity loss at ${vlPercent}% exceeds your ${threshold}% threshold. Consider ending this set.`,
-                    'velocity_warning'
-                );
-            }
-        }
-
-        // Form coaching with specific feedback
-        if (stepData.formScore < 70 && stepData.reps > 0) {
-            const formMessages = [
-                'Focus on form. Control the movement.',
-                'Slow down and maintain proper technique.',
-                'Quality over speed. Focus on the muscle contraction.',
-                'Check your posture and range of motion.'
-            ];
-            const message = formMessages[Math.floor(Math.random() * formMessages.length)];
-            this.queueMessage(message, 'form_correction');
-        }
-
-        // Rep milestones and encouragement
-        if (stepData.isNewRep) {
-            if (stepData.reps % 5 === 0 && stepData.reps > 0) {
-                this.queueMessage(`${stepData.reps} reps completed. Keep pushing.`, 'encouragement');
-            } else if (stepData.reps === 1) {
-                this.queueMessage('First rep down. Find your rhythm.', 'encouragement');
-            }
-        }
-    }
-
-    onWorkoutStart() {
-        if (this.isVapiActive) {
-            this.sendToVapi('Workout started. I\'ll be your AI coach today. Let\'s achieve your fitness goals together.');
-        }
-    }
-
-    onExerciseStart(exerciseType) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const exerciseTips = {
-            shoulder_press: 'Keep your core tight and press straight up.',
-            lateral_raise: 'Raise your arms to shoulder height with control.',
-            front_raise: 'Lift with your shoulders, not your arms.',
-            rear_delt_fly: 'Squeeze your shoulder blades together.',
-            bicep_curl: 'Keep your elbows stable and control the weight.',
-            tricep_extension: 'Keep your upper arms still.',
-            chest_press: 'Control the weight on both the push and return.',
-            push_ups: 'Keep your body in a straight line.',
-            rows: 'Pull with your back muscles, not your arms.',
-            squats: 'Keep your chest up and knees over your toes.'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        const tip = exerciseTips[exerciseType] || 'Focus on proper form.';
-        
-        this.queueMessage(`Starting ${name}. ${tip}`, 'exercise_start');
-    }
-
-    onSetComplete(exerciseType, setData) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        let message = `${name} set complete. ${setData.reps} reps. Well done.`;
-
-        // Add performance feedback
-        if (setData.velocityLoss && setData.velocityLoss < 0.15) {
-            message += ' You maintained great power throughout the set.';
-        } else if (setData.formScore > 85) {
-            message += ' Excellent form on that set.';
-        }
-
-        this.queueMessage(message, 'set_complete');
-
-        // Weight adjustment recommendations
-        setTimeout(() => {
-            this.provideWeightGuidance(exerciseType, setData);
-        }, 3000);
-    }
-
-    provideWeightGuidance(exerciseType, setData) {
-        if (!setData.velocityLoss) return;
-
-        const threshold = this.intensityThresholds[this.currentIntensity];
-        const vl = setData.velocityLoss;
-        
-        if (vl < threshold - 0.05) {
-            this.queueMessage(
-                `Your velocity loss was only ${Math.round(vl * 100)}%. Consider adding 2.5 to 5 pounds for the next set to reach your target training zone.`,
-                'weight_adjustment'
-            );
-        } else if (vl > threshold + 0.05) {
-            this.queueMessage(
-                `High velocity loss at ${Math.round(vl * 100)}%. Consider reducing weight by 2.5 to 5 pounds next set.`,
-                'weight_adjustment'
-            );
+        // Velocity loss analysis
+        const currentVL = stepData.velocityLoss || 0;
+        if (currentVL > 0.30) {
+            this.insights.push({
+                type: 'velocity',
+                severity: 'critical',
+                message: `Velocity loss: ${Math.round(currentVL * 100)}% - High fatigue`,
+                recommendation: 'End this set immediately. Take extended rest.',
+                trend: 'stable'
+            });
+        } else if (currentVL > 0.20) {
+            this.insights.push({
+                type: 'velocity',
+                severity: 'warning',
+                message: `Velocity loss: ${Math.round(currentVL * 100)}% - Moderate fatigue`,
+                recommendation: 'Monitor closely. Consider ending set soon.',
+                trend: 'stable'
+            });
         } else {
-            this.queueMessage(
-                `Perfect velocity loss at ${Math.round(vl * 100)}%. You\'re right in your target training zone.`,
-                'weight_adjustment'
-            );
-        }
-    }
-
-    onExerciseComplete(exerciseType) {
-        const exerciseNames = {
-            shoulder_press: 'Shoulder Press',
-            lateral_raise: 'Lateral Raise',
-            front_raise: 'Front Raise',
-            rear_delt_fly: 'Rear Delt Fly',
-            bicep_curl: 'Bicep Curl',
-            tricep_extension: 'Tricep Extension',
-            chest_press: 'Chest Press',
-            push_ups: 'Push-ups',
-            rows: 'Rows',
-            squats: 'Squats'
-        };
-
-        const name = exerciseNames[exerciseType] || exerciseType;
-        this.sendToVapi(`${name} complete. Great work. Moving to the next exercise.`);
-    }
-
-    onWorkoutComplete() {
-        this.sendToVapi('Workout complete. Outstanding effort today! Remember to stretch and hydrate. I\'ll analyze your performance data.');
-        
-        // Stop Vapi session after workout
-        setTimeout(() => {
-            this.stopVapi();
-        }, 5000);
-    }
-
-    queueMessage(message, category = 'general') {
-        if (!this.isVapiActive) return;
-
-        // Check cooldown
-        const lastTime = this.messageHistory.get(category) || 0;
-        const cooldown = this.MESSAGE_COOLDOWNS[category] || 10000;
-        
-        if (Date.now() - lastTime < cooldown) {
-            return;
+            this.insights.push({
+                type: 'velocity',
+                severity: 'good',
+                message: `Velocity loss: ${Math.round(currentVL * 100)}% - Good power output`,
+                recommendation: 'Maintain current intensity and form.',
+                trend: 'stable'
+            });
         }
 
-        // Avoid duplicates
-        if (this.messageQueue.includes(message)) {
-            return;
-        }
-
-        this.messageQueue.push(message);
-        this.messageHistory.set(category, Date.now());
-        
-        // Limit queue size
-        if (this.messageQueue.length > 3) {
-            this.messageQueue.shift();
-        }
+        return this.insights;
     }
 
-    // Public control methods
-    async toggle() {
-        if (this.isVapiActive) {
-            await this.stopVapi();
-            return false;
-        } else {
-            return await this.initializeVapi();
-        }
+    reset() {
+        this.insights = [];
     }
+}
 
-    clearQueue() {
-        this.messageQueue = [];
-    }
+        // ===== MAIN APPLICATION =====
 
-    getStatus() {
-        return {
-            enabled: this.isEnabled,
-            vapiActive: this.isVapiActive,
-            queueLength: this.messageQueue.length,
-            intensity: this.currentIntensity,
-            vlThreshold: this.intensityThresholds[this.currentIntensity]
-        };
-    }
-
-    // Manual message sending (for testing or direct communication)
-    async sendMessage(message, role = 'user') {
-        await this.sendToVapi(message, role);
-    }
-}       // Visual Insight System
-        class VisualInsightSystem {
+        class VelocityCoachAI {
             constructor() {
-                this.insights = [];
-                this.historicalData = new Map();
+                console.log('🏃‍♂️ Starting VelocityCoach AI with immediate functionality...');
+                this.initializeComponents();
+                this.setupEventHandlers();
+                this.initializeBasicMode();
             }
 
-            analyze(stepData) {
-                this.trackData(stepData);
-                this.insights = [];
+            initializeComponents() {
+                // Core components
+                this.landmarker = null;
+                this.video = document.getElementById("video");
+                this.canvas = document.getElementById("canvas");
+                this.ctx = this.canvas.getContext("2d");
+                this.stream = null;
+                this.running = false;
+                this.advancedMode = false;
 
-                // Analyze different aspects
-                this.analyzeForm(stepData);
-                this.analyzeVelocity(stepData);
-                this.analyzeFatigue(stepData);
+                // Exercise system
+                this.currentExercise = 'shoulder_press';
+                this.exercises = new Map([
+                    ['shoulder_press', { name: 'Shoulder Press', sets: 4, reps: 8, completed: 0, currentSet: 1 }],
+                    ['jumping_jacks', { name: 'Jumping Jacks', sets: 3, reps: 12, completed: 0, currentSet: 1 }],
+                    ['front_raise', { name: 'Front Raise', sets: 3, reps: 12, completed: 0, currentSet: 1 }],
+                    ['rear_delt_fly', { name: 'Rear Delt Fly', sets: 3, reps: 15, completed: 0, currentSet: 1 }],
+                    ['bicep_curl', { name: 'Bicep Curl', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
+                    ['tricep_extension', { name: 'Tricep Extension', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
+                    ['chest_press', { name: 'Chest Press', sets: 3, reps: 8, completed: 0, currentSet: 1 }],
+                    ['push_ups', { name: 'Push-ups', sets: 3, reps: 15, completed: 0, currentSet: 1 }],
+                    ['rows', { name: 'Rows', sets: 3, reps: 10, completed: 0, currentSet: 1 }],
+                    ['squats', { name: 'Squats', sets: 4, reps: 12, completed: 0, currentSet: 1 }]
+                ]);
 
-                return this.insights;
+                // Start with basic detectors
+                this.enhancedDetectors = {};
+                this.detector = new BasicExerciseDetector(this.currentExercise);
+                
+                // Voice & AI systems
+                this.voiceCoach = new VAPICoach();
+                this.insightSystem = new VisualInsightSystem();
+                
+                this.sessionStartTime = 0;
+                this.lastAnalysisTime = 0;
             }
 
-            trackData(stepData) {
-                const metrics = {
-                    formScore: stepData.formScore,
-                    velocity: Math.abs(stepData.velocity),
-                    velocityLoss: stepData.velocityLoss || 0
+            setupEventHandlers() {
+                // Control buttons
+                document.getElementById('btnStart')?.addEventListener('click', () => this.start());
+                document.getElementById('btnStop')?.addEventListener('click', () => this.stop());
+                document.getElementById('btnCompleteSet')?.addEventListener('click', () => this.completeSet());
+                document.getElementById('btnSkipExercise')?.addEventListener('click', () => this.skipExercise());
+                document.getElementById('btnToggleVoice')?.addEventListener('click', () => this.toggleVoice());
+                document.getElementById('btnResetWorkout')?.addEventListener('click', () => this.resetWorkout());
+
+                // Exercise selection
+                document.querySelectorAll('.exercise-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const exercise = card.dataset.exercise;
+                        this.switchExercise(exercise);
+                    });
+                });
+
+                // Intensity selector
+                document.getElementById('intensitySelect')?.addEventListener('change', (e) => {
+                    this.voiceCoach.updateIntensity(e.target.value);
+                });
+            }
+
+            initializeBasicMode() {
+                // App is ready immediately
+                this.updateInsights([{
+                    type: 'system',
+                    severity: 'good',
+                    message: 'VelocityCoach AI Ready',
+                    recommendation: 'Click "Start Workout" to begin your training session',
+                    trend: 'stable'
+                }]);
+
+                console.log('✅ Basic mode initialized - App ready to use!');
+            }
+
+            // Background upgrade to advanced mode
+            async upgradeToAdvancedMode() {
+                if (this.advancedMode) return;
+                
+                console.log('🔄 Upgrading to advanced mode in background...');
+                
+                try {
+                    // Update status badge
+                    const statusBadge = document.getElementById('statusBadge');
+                    if (statusBadge && !this.running) {
+                        statusBadge.textContent = 'Upgrading';
+                        statusBadge.className = 'status-badge upgrading';
+                    }
+
+                    // Load MediaPipe in background
+                    await this.loadMediaPipeAsync();
+                    
+                    this.enhancedDetectors = {
+                        'squats': new EnhancedSquatDetector(),
+                        'bicep_curl': new EnhancedBicepCurlDetector(),
+                        'shoulder_press': new EnhancedShoulderPressDetector(),
+                        'jumping_jacks': new EnhancedLateralRaiseDetector(),
+                        'front_raise': new EnhancedLateralRaiseDetector(),
+                        'rear_delt_fly': new EnhancedLateralRaiseDetector(),
+                        'tricep_extension': new EnhancedTricepExtensionDetector(),
+                        'chest_press': new EnhancedTricepExtensionDetector(),
+                        'rows': new EnhancedRowsDetector()
+                    };
+
+                    this.advancedMode = true;
+                    
+                    // Update status
+                    if (statusBadge && !this.running) {
+                        statusBadge.textContent = 'Enhanced';
+                        statusBadge.className = 'status-badge ready';
+                    }
+
+                    this.updateInsights([{
+                        type: 'system',
+                        severity: 'good',
+                        message: 'Advanced Mode Activated',
+                        recommendation: 'Enhanced pose detection and form analysis now available',
+                        trend: 'improving'
+                    }]);
+
+                    console.log('🚀 Advanced mode upgrade complete!');
+
+                } catch (error) {
+                    console.warn('Advanced mode upgrade failed, continuing with basic mode:', error);
+                    
+                    if (statusBadge && !this.running) {
+                        statusBadge.textContent = 'Basic';
+                        statusBadge.className = 'status-badge ready';
+                    }
+
+                    this.updateInsights([{
+                        type: 'system',
+                        severity: 'warning',
+                        message: 'Basic Mode Active',
+                        recommendation: 'Full functionality available, pose detection limited',
+                        trend: 'stable'
+                    }]);
+                }
+            }
+
+            async loadMediaPipeAsync() {
+                // Fast MediaPipe loading with optimizations
+                const { FilesetResolver, PoseLandmarker } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3");
+                
+                const fileset = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                
+                // Use lite model for faster loading
+                this.landmarker = await PoseLandmarker.createFromOptions(fileset, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                        delegate: "CPU" // CPU is more reliable than GPU for startup
+                    },
+                    runningMode: "VIDEO",
+                    numPoses: 1,
+                    minPoseDetectionConfidence: 0.3, // Lower for faster detection
+                    minPoseTrackingConfidence: 0.3,
+                    minPosePresenceConfidence: 0.3
+                });
+            }
+
+            async start() {
+                try {
+                    // Get camera access
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            facingMode: "user", 
+                            width: { ideal: 640 }, // Lower resolution for better performance
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    await this.video.play();
+
+                    this.running = true;
+                    this.sessionStartTime = Date.now();
+                    this.updateUI('running');
+                    
+                    // Start appropriate loop based on mode
+                    if (this.advancedMode && this.landmarker) {
+                        this.advancedLoop();
+                        console.log('🎯 Workout started with advanced pose detection');
+                    } else {
+                        this.basicLoop();
+                        console.log('⏱️ Workout started in basic timer mode');
+                    }
+                    
+                    this.voiceCoach.onWorkoutStart();
+
+                } catch (error) {
+                    console.warn('Camera access failed, starting timer mode:', error);
+                    // Start without camera
+                    this.running = true;
+                    this.sessionStartTime = Date.now();
+                    this.updateUI('running');
+                    this.timerLoop();
+                    this.voiceCoach.onWorkoutStart();
+                }
+            }
+
+            // Advanced loop with full pose detection
+            advancedLoop() {
+                if (!this.running || !this.landmarker) return;
+
+                const w = this.video.videoWidth || 640;
+                const h = this.video.videoHeight || 480;
+                this.canvas.width = w;
+                this.canvas.height = h;
+
+                const nowMs = performance.now();
+
+                try {
+                    const result = this.landmarker.detectForVideo(this.video, nowMs);
+
+                    // Clear and draw video
+                    this.ctx.clearRect(0, 0, w, h);
+                    if (this.video.videoWidth > 0) {
+                        this.ctx.drawImage(this.video, 0, 0, w, h);
+                    }
+
+                    if (result.landmarks && result.landmarks[0]) {
+                        const landmarks = result.landmarks[0];
+                        
+                        // Draw pose
+                        this.drawAdvancedPose(landmarks, w, h);
+                        
+                        // Process exercise with enhanced detection
+                        let stepData;
+                        const enhancedDetector = this.enhancedDetectors[this.currentExercise];
+                        if (enhancedDetector) {
+                            stepData = enhancedDetector.step(landmarks, nowMs / 1000, w, h);
+                            stepData.exercise = this.currentExercise;
+                        } else {
+                            stepData = this.detector.step(landmarks, nowMs / 1000);
+                        }
+                        
+                        // Update systems
+                        this.updateMetrics(stepData);
+                        this.updateInsights(this.insightSystem.analyze(stepData));
+                        this.voiceCoach.analyzeStep(stepData);
+                        
+                        // Auto set completion
+                        if (stepData.isNewRep) {
+                            this.checkAutoSetCompletion(stepData);
+                        }
+                        
+                    } else {
+                        this.drawNoPersonDetected();
+                    }
+                } catch (error) {
+                    console.warn('Advanced detection error, falling back:', error);
+                    this.basicLoop();
+                    return;
+                }
+
+                if (this.running) {
+                    requestAnimationFrame(() => this.advancedLoop());
+                }
+            }
+
+            // Basic loop with video but no pose detection
+            basicLoop() {
+                if (!this.running) return;
+
+                const w = this.canvas.width = this.video.videoWidth || 640;
+                const h = this.canvas.height = this.video.videoHeight || 480;
+                
+                this.ctx.clearRect(0, 0, w, h);
+                
+                // Draw video if available
+                if (this.video.videoWidth > 0) {
+                    this.ctx.drawImage(this.video, 0, 0, w, h);
+                }
+
+                // Draw basic interface overlay
+                this.drawBasicInterface();
+
+                if (this.running) {
+                    requestAnimationFrame(() => this.basicLoop());
+                }
+            }
+
+            // Timer-only mode (no video)
+            timerLoop() {
+                if (!this.running) return;
+
+                const w = this.canvas.width = 640;
+                const h = this.canvas.height = 480;
+                
+                this.ctx.clearRect(0, 0, w, h);
+                this.drawTimerInterface();
+
+                if (this.running) {
+                    setTimeout(() => this.timerLoop(), 100);
+                }
+            }
+
+            drawAdvancedPose(landmarks, w, h) {
+                // Enhanced pose visualization with exercise-specific highlighting
+                const exerciseConnections = {
+                    squats: [[11, 23], [12, 24], [23, 25], [24, 26], [25, 27], [26, 28]],
+                    push_ups: [[11, 13], [12, 14], [13, 15], [14, 16]],
+                    bicep_curl: [[11, 13], [12, 14], [13, 15], [14, 16], [11, 23], [12, 24]],
+                    general: [[11, 12], [11, 23], [12, 24], [23, 24], [11, 13], [13, 15], [12, 14], [14, 16]]
                 };
 
-                Object.entries(metrics).forEach(([key, value]) => {
-                    if (!this.historicalData.has(key)) {
-                        this.historicalData.set(key, []);
+                const connections = exerciseConnections[this.currentExercise] || exerciseConnections.general;
+
+                // Draw skeleton
+                this.ctx.strokeStyle = "rgba(80, 215, 255, 0.8)";
+                this.ctx.lineWidth = 3;
+                this.ctx.lineCap = "round";
+                this.ctx.beginPath();
+
+                connections.forEach(([startIdx, endIdx]) => {
+                    const startPoint = landmarks[startIdx];
+                    const endPoint = landmarks[endIdx];
+                    
+                    if (startPoint && endPoint && 
+                        (startPoint.visibility || 1) > 0.5 && 
+                        (endPoint.visibility || 1) > 0.5) {
+                        this.ctx.moveTo(startPoint.x * w, startPoint.y * h);
+                        this.ctx.lineTo(endPoint.x * w, endPoint.y * h);
                     }
-                    
-                    const history = this.historicalData.get(key);
-                    history.push(value);
-                    
-                    if (history.length > 20) {
-                        history.shift();
+                });
+                this.ctx.stroke();
+
+                // Draw joints
+                this.ctx.fillStyle = "rgba(34, 197, 94, 0.9)";
+                landmarks.forEach(landmark => {
+                    if ((landmark.visibility || 1) > 0.5) {
+                        this.ctx.beginPath();
+                        this.ctx.arc(landmark.x * w, landmark.y * h, 4, 0, 2 * Math.PI);
+                        this.ctx.fill();
                     }
                 });
             }
 
-            analyzeForm(stepData) {
-                const formScore = stepData.formScore;
-                let severity = 'good';
-                let message = '';
-                let recommendation = '';
+            drawBasicInterface() {
+                const w = this.canvas.width || 640;
+                const h = this.canvas.height || 480;
 
-                if (formScore < 50) {
-                    severity = 'critical';
-                    message = `Form score: ${Math.round(formScore)}% - Needs immediate attention`;
-                    recommendation = 'Stop and focus on proper technique. Consider reducing weight.';
-                } else if (formScore < 75) {
-                    severity = 'warning';
-                    message = `Form score: ${Math.round(formScore)}% - Room for improvement`;
-                    recommendation = 'Slow down the movement and focus on control.';
-                } else {
-                    message = `Form score: ${Math.round(formScore)}% - Excellent technique`;
-                    recommendation = 'Maintain this quality throughout the set.';
+                // Basic overlay
+                this.ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                this.ctx.fillRect(10, 10, 250, 100);
+                
+                this.ctx.fillStyle = "rgba(80, 215, 255, 1)";
+                this.ctx.font = "18px system-ui";
+                this.ctx.fillText("Video Mode Active", 20, 35);
+                
+                this.ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                this.ctx.font = "14px system-ui";
+                this.ctx.fillText("Manual rep counting", 20, 55);
+                this.ctx.fillText("Voice coaching active", 20, 75);
+                this.ctx.fillText("Use controls to track sets", 20, 95);
+            }
+
+            drawTimerInterface() {
+                const w = this.canvas.width || 640;
+                const h = this.canvas.height || 480;
+
+                // Timer background
+                this.ctx.fillStyle = "rgba(13, 17, 23, 0.9)";
+                this.ctx.fillRect(0, 0, w, h);
+
+                // Title
+                this.ctx.fillStyle = "rgba(80, 215, 255, 1)";
+                this.ctx.font = "36px system-ui";
+                this.ctx.textAlign = "center";
+                this.ctx.fillText("VelocityCoach AI", w / 2, h / 2 - 80);
+
+                // Subtitle
+                this.ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                this.ctx.font = "20px system-ui";
+                this.ctx.fillText("Timer Mode", w / 2, h / 2 - 40);
+
+                // Instructions
+                this.ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+                this.ctx.font = "16px system-ui";
+                this.ctx.fillText("Use manual controls to track your workout", w / 2, h / 2);
+                this.ctx.fillText("Voice coaching and timing available", w / 2, h / 2 + 25);
+
+                // Timer
+                if (this.sessionStartTime) {
+                    const elapsed = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    this.ctx.fillStyle = "rgba(34, 197, 94, 1)";
+                    this.ctx.font = "48px system-ui";
+                    this.ctx.fillText(timeStr, w / 2, h / 2 + 80);
                 }
 
-                this.insights.push({
-                    type: 'form',
-                    severity,
-                    message,
-                    recommendation,
-                    trend: 'stable'
+                this.ctx.textAlign = "left";
+            }
+
+            drawNoPersonDetected() {
+                this.ctx.fillStyle = "rgba(239, 68, 68, 0.9)";
+                this.ctx.font = "24px system-ui";
+                this.ctx.textAlign = "center";
+                this.ctx.fillText(
+                    "Position yourself in frame",
+                    this.canvas.width / 2,
+                    this.canvas.height / 2
+                );
+                this.ctx.textAlign = "left";
+            }
+
+            checkAutoSetCompletion(stepData) {
+                const exercise = this.exercises.get(this.currentExercise);
+                if (!exercise) return;
+
+                // Auto-complete based on target reps or critical issues
+                if (stepData.reps >= exercise.reps || 
+                    stepData.velocityLoss > 0.4 || 
+                    stepData.formScore < 40) {
+                    setTimeout(() => this.completeSet(), 1000);
+                }
+            }
+
+            updateMetrics(stepData) {
+                document.getElementById('repCount').textContent = stepData.reps;
+                document.getElementById('metricAngle').textContent = `${Math.round(stepData.angle)}°`;
+                document.getElementById('metricVelocity').textContent = stepData.velocity ? 
+                    `${Math.abs(stepData.velocity).toFixed(1)}°/s` : '—';
+                document.getElementById('metricForm').textContent = Math.round(stepData.formScore);
+                document.getElementById('metricVL').textContent = `${Math.round((stepData.velocityLoss || 0) * 100)}%`;
+
+                // Update metric styling
+                const formMetric = document.querySelector('#metricForm').parentElement;
+                const vlMetric = document.querySelector('#metricVL').parentElement;
+
+                formMetric.className = 'metric';
+                if (stepData.formScore < 50) formMetric.classList.add('critical');
+                else if (stepData.formScore < 75) formMetric.classList.add('warning');
+
+                vlMetric.className = 'metric';
+                if (stepData.velocityLoss > 0.3) vlMetric.classList.add('critical');
+                else if (stepData.velocityLoss > 0.2) vlMetric.classList.add('warning');
+
+                // Update exercise info
+                const exercise = this.exercises.get(this.currentExercise);
+                if (exercise) {
+                    document.getElementById('currentExerciseName').textContent = exercise.name;
+                    document.getElementById('currentSetInfo').textContent = 
+                        `Set ${exercise.currentSet} of ${exercise.sets} • Target: ${exercise.reps} reps`;
+                }
+            }
+
+            updateInsights(insights) {
+                const grid = document.getElementById('insightsGrid');
+                grid.innerHTML = '';
+
+                insights.forEach(insight => {
+                    const card = document.createElement('div');
+                    card.className = `insight-card ${insight.severity}`;
+                    
+                    card.innerHTML = `
+                        <div class="insight-header">
+                            <span class="insight-type ${insight.severity}">${insight.type}</span>
+                            <span class="insight-trend ${insight.trend || 'stable'}">${insight.trend || 'Stable'}</span>
+                        </div>
+                        <div class="insight-message">${insight.message}</div>
+                        <div class="insight-recommendation">${insight.recommendation}</div>
+                    `;
+                    
+                    grid.appendChild(card);
                 });
             }
 
-            analyzeVelocity(stepData) {
-                const vlHistory = this.historicalData.get('velocityLoss') || [];
-                if (vlHistory.length < 3) return;
+            updateUI(state) {
+                const btnStart = document.getElementById('btnStart');
+                const btnStop = document.getElementById('btnStop');
+                const statusBadge = document.getElementById('statusBadge');
 
-                const currentVL = vlHistory[vlHistory.length - 1] || 0;
-                let severity = 'good';
-                let message = '';
-                let recommendation = '';
-
-                if (currentVL > 0.30) {
-                    severity = 'critical';
-                    message = `Velocity loss: ${Math.round(currentVL * 100)}% - High fatigue`;
-                    recommendation = 'End this set immediately. Take extended rest.';
-                } else if (currentVL > 0.20) {
-                    severity = 'warning';
-                    message = `Velocity loss: ${Math.round(currentVL * 100)}% - Moderate fatigue`;
-                    recommendation = 'Monitor closely. Consider ending set soon.';
+                if (state === 'running') {
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                    statusBadge.textContent = 'Recording';
+                    statusBadge.className = 'status-badge recording';
                 } else {
-                    message = `Velocity loss: ${Math.round(currentVL * 100)}% - Good power output`;
-                    recommendation = 'Maintain current intensity and form.';
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    const modeText = this.advancedMode ? 'Enhanced' : 'Ready';
+                    statusBadge.textContent = modeText;
+                    statusBadge.className = 'status-badge ready';
+                }
+            }
+
+            stop() {
+                this.running = false;
+                
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
                 }
 
-                this.insights.push({
-                    type: 'velocity',
-                    severity,
-                    message,
-                    recommendation,
-                    trend: 'stable'
-                });
+                this.updateUI('stopped');
+                this.voiceCoach.clearQueue();
+                console.log('🛑 Workout stopped');
             }
 
-            analyzeFatigue(stepData) {
-                const formHistory = this.historicalData.get('formScore') || [];
-                const velocityHistory = this.historicalData.get('velocity') || [];
-                
-                if (formHistory.length < 10) return;
+            completeSet() {
+                const exercise = this.exercises.get(this.currentExercise);
+                if (!exercise) return;
 
-                const recentForm = formHistory.slice(-5);
-                const earlierForm = formHistory.slice(-10, -5);
-                
-                if (earlierForm.length === 0) return;
+                // Get current rep count
+                let currentReps = 0;
+                const enhancedDetector = this.enhancedDetectors[this.currentExercise];
+                if (enhancedDetector) {
+                    currentReps = enhancedDetector.counter || enhancedDetector.counterRight || enhancedDetector.counterLeft || 0;
+                } else {
+                    currentReps = this.detector.reps;
+                }
 
-                const recentAvg = recentForm.reduce((a, b) => a + b) / recentForm.length;
-                const earlierAvg = earlierForm.reduce((a, b) => a + b) / earlierForm.length;
+                this.voiceCoach.onSetComplete(this.currentExercise, { reps: currentReps });
+
+                // Update exercise data
+                exercise.completed += currentReps;
+                exercise.currentSet++;
+
+                // Reset detector
+                if (enhancedDetector) {
+                    enhancedDetector.reset();
+                } else {
+                    this.detector.reset();
+                }
+
+                // Check if exercise is complete
+                if (exercise.currentSet > exercise.sets) {
+                    this.markExerciseComplete(this.currentExercise);
+                    this.moveToNextExercise();
+                } else {
+                    this.updateExerciseProgress(this.currentExercise);
+                }
+
+                console.log(`✅ Set completed: ${currentReps} reps`);
+            }
+
+            skipExercise() {
+                this.markExerciseComplete(this.currentExercise);
+                this.moveToNextExercise();
+                console.log(`⏭️ Skipped exercise: ${this.currentExercise}`);
+            }
+
+            switchExercise(exerciseName) {
+                if (this.exercises.has(exerciseName)) {
+                    this.currentExercise = exerciseName;
+                    
+                    // Update detector
+                    if (this.enhancedDetectors[exerciseName]) {
+                        this.enhancedDetectors[exerciseName].reset();
+                    } else {
+                        this.detector = new BasicExerciseDetector(exerciseName);
+                    }
+
+                    this.updateActiveExercise(exerciseName);
+                    this.voiceCoach.onExerciseStart(exerciseName);
+                    
+                    console.log(`🔄 Switched to: ${exerciseName}`);
+                }
+            }
+
+            moveToNextExercise() {
+                const exerciseKeys = Array.from(this.exercises.keys());
+                const currentIndex = exerciseKeys.indexOf(this.currentExercise);
                 
-                const formDecline = ((earlierAvg - recentAvg) / earlierAvg) * 100;
+                // Find next incomplete exercise
+                for (let i = currentIndex + 1; i < exerciseKeys.length; i++) {
+                    const exercise = this.exercises.get(exerciseKeys[i]);
+                    if (exercise.currentSet <= exercise.sets) {
+                        this.switchExercise(exerciseKeys[i]);
+                        return;
+                    }
+                }
+
+                // Check if all exercises are complete
+                const allComplete = Array.from(this.exercises.values())
+                    .every(ex => ex.currentSet > ex.sets);
                 
-                if (formDecline > 15) {
-                    this.insights.push({
-                        type: 'fatigue',
-                        severity: 'warning',
-                        message: `Fatigue detected - Form declining by ${Math.round(formDecline)}%`,
-                        recommendation: 'Consider taking a longer rest between sets.',
-                        trend: 'declining'
-                    });
+                if (allComplete) {
+                    this.showWorkoutSummary();
+                }
+            }
+
+            markExerciseComplete(exerciseName) {
+                const card = document.querySelector(`[data-exercise="${exerciseName}"]`);
+                if (card) {
+                    card.classList.add('completed');
+                    card.classList.remove('active');
+                }
+            }
+
+            updateActiveExercise(exerciseName) {
+                document.querySelectorAll('.exercise-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+
+                const activeCard = document.querySelector(`[data-exercise="${exerciseName}"]`);
+                if (activeCard) {
+                    activeCard.classList.add('active');
+                }
+            }
+
+            updateExerciseProgress(exerciseName) {
+                const exercise = this.exercises.get(exerciseName);
+                if (!exercise) return;
+
+                const card = document.querySelector(`[data-exercise="${exerciseName}"]`);
+                if (!card) return;
+
+                const progressText = card.querySelector('.exercise-progress');
+                const progressFill = card.querySelector('.progress-fill');
+
+                if (progressText) {
+                    progressText.textContent = `Set ${exercise.currentSet}/${exercise.sets} • ${exercise.completed}/${exercise.sets * exercise.reps} reps`;
+                }
+
+                if (progressFill) {
+                    const progress = (exercise.completed / (exercise.sets * exercise.reps)) * 100;
+                    progressFill.style.width = `${Math.min(progress, 100)}%`;
+                }
+            }
+
+            showWorkoutSummary() {
+                const totalReps = Array.from(this.exercises.values())
+                    .reduce((total, ex) => total + ex.completed, 0);
+                
+                const duration = Math.round((Date.now() - this.sessionStartTime) / 60000);
+                
+                this.updateInsights([{
+                    type: 'summary',
+                    severity: 'good',
+                    message: `Workout Complete! ${totalReps} total reps in ${duration} minutes`,
+                    recommendation: 'Great job! Remember to stretch and hydrate.',
+                    trend: 'stable'
+                }]);
+
+                this.voiceCoach.onWorkoutComplete();
+                console.log(`🎉 Workout complete: ${totalReps} reps in ${duration} minutes`);
+            }
+
+            toggleVoice() {
+                const enabled = this.voiceCoach.toggle();
+                const btn = document.getElementById('btnToggleVoice');
+                const status = this.voiceCoach.getStatus();
+                
+                if (enabled && status.connected) {
+                    btn.textContent = 'Voice: ON';
+                    btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                } else {
+                    btn.textContent = 'Voice: OFF';
+                    btn.style.background = 'linear-gradient(135deg, #21262d, #30363d)';
+                }
+                
+                return enabled;
+            }
+
+            resetWorkout() {
+                // Reset all exercises
+                this.exercises.forEach(exercise => {
+                    exercise.completed = 0;
+                    exercise.currentSet = 1;
+                });
+
+                // Reset detectors
+                Object.values(this.enhancedDetectors).forEach(detector => detector.reset());
+                this.detector.reset();
+
+                // Reset UI
+                document.querySelectorAll('.exercise-card').forEach(card => {
+                    card.classList.remove('completed', 'active');
+                    const progressFill = card.querySelector('.progress-fill');
+                    if (progressFill) progressFill.style.width = '0%';
+                    
+                    const progressText = card.querySelector('.exercise-progress');
+                    if (progressText) {
+                        const exerciseName = card.dataset.exercise;
+                        const exercise = this.exercises.get(exerciseName);
+                        if (exercise) {
+                            progressText.textContent = `Set 0/${exercise.sets} • 0/${exercise.reps} reps`;
+                        }
+                    }
+                });
+
+                // Activate first exercise
+                this.currentExercise = 'shoulder_press';
+                this.updateActiveExercise(this.currentExercise);
+
+                // Reset insights
+                this.insightSystem.reset();
+                this.updateInsights([{
+                    type: 'system',
+                    severity: 'good',
+                    message: 'Workout Reset',
+                    recommendation: 'Ready to start fresh training session',
+                    trend: 'stable'
+                }]);
+
+                console.log('🔄 Workout reset');
+            }
+
+            // Manual rep increment for basic mode
+            incrementReps() {
+                const exercise = this.exercises.get(this.currentExercise);
+                if (!exercise) return;
+
+                // Increment current detector
+                if (this.enhancedDetectors[this.currentExercise]) {
+                    this.enhancedDetectors[this.currentExercise].counter++;
+                } else {
+                    this.detector.reps++;
+                }
+
+                // Update display
+                const currentReps = this.enhancedDetectors[this.currentExercise] ? 
+                    this.enhancedDetectors[this.currentExercise].counter : 
+                    this.detector.reps;
+
+                document.getElementById('repCount').textContent = currentReps;
+
+                // Voice feedback
+                if (currentReps % 5 === 0) {
+                    this.voiceCoach.queueMessage(`${currentReps} reps completed. Keep going!`);
+                }
+
+                console.log(`Manual rep increment: ${currentReps}`);
+            }
+
+            // Add manual rep increment button
+            addManualControls() {
+                const controlsPanel = document.querySelector('.controls-panel');
+                if (controlsPanel && !document.getElementById('btnIncrementRep')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'btnIncrementRep';
+                    btn.className = 'control-btn';
+                    btn.textContent = '+1 Rep';
+                    btn.onclick = () => this.incrementReps();
+                    controlsPanel.appendChild(btn);
                 }
             }
         }
 
-        // Initialize the application
+        // Initialize when DOM is ready
         window.addEventListener('DOMContentLoaded', () => {
-            const app = new VelocityCoachAI();
-            window.velocityCoachAI = app;
-            console.log('🚀 VelocityCoach AI - Complete Hackathon Version Initialized');
-        });
-    </script>
-    <body>
-    <button id="startCall">Start Voice Call</button>
-    <button id="stopCall">Stop Call</button>
-
-    <script type="module">
-        import { startCoach, stopCoach } from '/src/vapi-coach.ts';
-
-        document.getElementById('startCall').addEventListener('click', async () => {
-            try {
-                await startCoach();
-                console.log('Call started');
-            } catch (error) {
-                console.error('Error starting call:', error);
-            }
+            console.log('🚀 VelocityCoach AI - Fast Loading Complete');
         });
 
-        document.getElementById('stopCall').addEventListener('click', () => {
-            stopCoach();
-            console.log('Call stopped');
-        });
     </script>
 </body>
 </html>
