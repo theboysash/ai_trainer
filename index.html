@@ -1679,118 +1679,212 @@
         // Voice Coach System
         // Replace the entire VoiceCoach class (around line 1100) with:
     class VAPICoach {
-        constructor() {
-            this.startCoach = null;
-            this.stopCoach = null;
-            this.sendCoachSignal = null;
-            this.isEnabled = false;
-            this.isConnected = false;
-            this.messageQueue = [];
-            this.intensityThresholds = {
-                light: 0.20,
-                moderate: 0.25,
-                intense: 0.40
-            };
-            this.currentIntensity = 'moderate';
-            this.initializeVAPI();
-        }
+    constructor() {
+        this.vapi = null;
+        this.isEnabled = false;
+        this.isConnected = false;
+        this.messageQueue = [];
+        this.intensityThresholds = {
+            light: 0.20,
+            moderate: 0.25,
+            intense: 0.40
+        };
+        this.currentIntensity = 'moderate';
+        this.isProcessingMessage = false;
+        
+        // Track messages sent per set
+        this.currentSetMessages = {
+            formWarning: false,
+            velocityWarning: false,
+            encouragement: false,
+            repMilestone: false
+        };
+        
+        this.initializeVAPI();
+    }
 
-        async initializeVAPI() {
-            try {
-                // Import VAPI functions from your working file
-                const { startCoach, stopCoach, sendCoachSignal } = await import('./src/vapi-coach.ts');
-                this.startCoach = startCoach;
-                this.stopCoach = stopCoach;
-                this.sendCoachSignal = sendCoachSignal;
-                console.log('VAPI functions loaded successfully');
-            } catch (error) {
-                console.error('Failed to initialize VAPI:', error);
-            }
-        }
-
-        async toggle() {
-            if (!this.startCoach || !this.stopCoach) {
-                console.error('VAPI functions not loaded');
-                return false;
-            }
-
-            if (this.isEnabled && this.isConnected) {
-                await this.stopCoach();
-                this.isEnabled = false;
-                this.isConnected = false;
-            } else {
-                try {
-                    await this.startCoach();
-                    this.isEnabled = true;
-                    this.isConnected = true;
-                } catch (error) {
-                    console.error('Failed to start VAPI:', error);
-                    this.isEnabled = false;
-                }
-            }
-            return this.isEnabled;
-        }
-
-        updateIntensity(intensity) {
-            this.currentIntensity = intensity;
-            this.sendMessage(`Training intensity set to ${intensity}.`);
-        }
-
-        analyzeStep(stepData) {
-            if (!this.isEnabled || !this.isConnected) return;
-
-            // Send exercise data to VAPI assistant
-            const message = {
-                type: 'exercise_data',
-                exercise: stepData.exercise,
-                reps: stepData.reps,
-                formScore: stepData.formScore,
-                velocityLoss: stepData.velocityLoss,
-                warnings: stepData.warnings,
-                isNewRep: stepData.isNewRep
-            };
-
-            this.sendMessage(JSON.stringify(message));
-        }
-
-        async sendMessage(content) {
-            if (!this.isConnected || !this.sendCoachSignal) return;
+    async initializeVAPI() {
+        try {
+            const { vapi } = await import('./src/vapi-coach.ts');
+            this.vapi = vapi;
             
-            try {
-                await this.sendCoachSignal(content, 'user');
-            } catch (error) {
-                console.error('Failed to send VAPI message:', error);
-            }
-        }
-
-        onWorkoutStart() {
-            this.sendMessage('Workout started. Provide motivation and guidance.');
-        }
-
-        onExerciseStart(exerciseType) {
-            this.sendMessage(`Starting ${exerciseType}. Provide form cues and encouragement.`);
-        }
-
-        onSetComplete(exerciseType, setData) {
-            this.sendMessage(`Set complete for ${exerciseType}. ${setData.reps} reps completed. Provide feedback.`);
-        }
-
-        onWorkoutComplete() {
-            this.sendMessage('Workout complete. Provide congratulations and recovery advice.');
-        }
-
-        getStatus() {
-            return { enabled: this.isEnabled, connected: this.isConnected, intensity: this.currentIntensity };
-        }
-
-        clearQueue() {
-            this.messageQueue = [];
-            if (this.isConnected && this.stopCoach) {
-                this.stopCoach();
-            }
+            this.vapi.on('call-start', () => {
+                console.log('VAPI call started - ready to send messages');
+                this.isConnected = true;
+                this.processMessageQueue();
+            });
+            
+            this.vapi.on('call-end', () => {
+                console.log('VAPI call ended');
+                this.isConnected = false;
+                this.isEnabled = false;
+                this.isProcessingMessage = false;
+            });
+            
+            this.vapi.on('speech-start', () => {
+                this.isProcessingMessage = true;
+            });
+            
+            this.vapi.on('speech-end', () => {
+                this.isProcessingMessage = false;
+                setTimeout(() => this.processMessageQueue(), 500);
+            });
+            
+            this.vapi.on('error', (error) => {
+                console.error('VAPI error:', error);
+                this.isConnected = false;
+                this.isProcessingMessage = false;
+            });
+            
+            console.log('VAPI initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize VAPI:', error);
         }
     }
-    // Insight System
+
+    async toggle() {
+        if (!this.vapi) {
+            console.error('VAPI not initialized');
+            return false;
+        }
+
+        if (this.isEnabled) {
+            this.vapi.stop();
+            this.isEnabled = false;
+            this.isConnected = false;
+            this.isProcessingMessage = false;
+            this.messageQueue = [];
+        } else {
+            try {
+                await this.vapi.start('ad349484-eed2-4192-b7e4-caa6cb6f31d0');
+                this.isEnabled = true;
+            } catch (error) {
+                console.error('Failed to start VAPI:', error);
+                this.isEnabled = false;
+            }
+        }
+        return this.isEnabled;
+    }
+
+    // Reset message tracking when a new set starts
+    onNewSet() {
+        this.currentSetMessages = {
+            formWarning: false,
+            velocityWarning: false,
+            encouragement: false,
+            repMilestone: false
+        };
+        console.log('Reset message tracking for new set');
+    }
+
+    updateIntensity(intensity) {
+        this.currentIntensity = intensity;
+        this.queueMessage(`Training intensity set to ${intensity}.`, 'system');
+    }
+
+    analyzeStep(stepData) {
+        if (!this.isEnabled) return;
+
+        // Form warning - once per set
+        if (stepData.formScore < 60 && !this.currentSetMessages.formWarning) {
+            this.queueMessage(`Form needs attention - score ${Math.round(stepData.formScore)}%.`, 'formWarning');
+            this.currentSetMessages.formWarning = true;
+        }
+
+        // Velocity loss warning - once per set
+        if (stepData.velocityLoss > 0.3 && !this.currentSetMessages.velocityWarning) {
+            this.queueMessage(`High fatigue detected. Consider ending the set.`, 'velocityWarning');
+            this.currentSetMessages.velocityWarning = true;
+        }
+
+        // Rep milestone encouragement - once per set at rep 5
+        if (stepData.reps === 5 && !this.currentSetMessages.repMilestone) {
+            this.queueMessage(`Halfway there! Keep pushing.`, 'repMilestone');
+            this.currentSetMessages.repMilestone = true;
+        }
+
+        // Encouragement for good form - once per set
+        if (stepData.formScore > 85 && stepData.reps > 3 && !this.currentSetMessages.encouragement) {
+            this.queueMessage(`Excellent form! Keep it up.`, 'encouragement');
+            this.currentSetMessages.encouragement = true;
+        }
+    }
+
+    queueMessage(content, messageType = 'general') {
+        // Don't queue if we already sent this type of message this set
+        if (messageType !== 'general' && messageType !== 'system' && this.currentSetMessages[messageType]) {
+            console.log(`Message type '${messageType}' already sent this set, skipping`);
+            return;
+        }
+
+        this.messageQueue.push(content);
+        console.log(`Queued ${messageType} message: "${content}"`);
+        
+        if (this.isConnected && !this.isProcessingMessage) {
+            this.processMessageQueue();
+        }
+    }
+
+    async processMessageQueue() {
+        if (!this.isConnected || !this.vapi || this.messageQueue.length === 0 || this.isProcessingMessage) {
+            return;
+        }
+        
+        const message = this.messageQueue.shift();
+        this.isProcessingMessage = true;
+        
+        try {
+            await this.vapi.send({
+                type: 'add-message',
+                message: { role: 'user', content: message },
+            });
+            console.log('Sent VAPI message:', message);
+        } catch (error) {
+            console.error('Failed to send VAPI message:', error);
+            this.isProcessingMessage = false;
+        }
+    }
+
+    onWorkoutStart() {
+        this.queueMessage('Workout started. Provide motivation and guidance.', 'system');
+    }
+
+    onExerciseStart(exerciseType) {
+        this.queueMessage(`Starting ${exerciseType}. Provide form cues and encouragement.`, 'system');
+    }
+
+    onSetComplete(exerciseType, setData) {
+        this.queueMessage(`Set complete for ${exerciseType}. ${setData.reps} reps completed. Great work!`, 'system');
+        // Reset for next set
+        this.onNewSet();
+    }
+
+    onWorkoutComplete() {
+        this.queueMessage('Workout complete. Provide congratulations and recovery advice.', 'system');
+    }
+
+    getStatus() {
+        return { 
+            enabled: this.isEnabled, 
+            connected: this.isConnected, 
+            intensity: this.currentIntensity,
+            queueLength: this.messageQueue.length,
+            isProcessing: this.isProcessingMessage,
+            setMessages: this.currentSetMessages
+        };
+    }
+
+    clearQueue() {
+        this.messageQueue = [];
+        this.isProcessingMessage = false;
+        this.onNewSet(); // Reset message tracking
+        if (this.isEnabled && this.vapi) {
+            this.vapi.stop();
+            this.isEnabled = false;
+            this.isConnected = false;
+        }
+    }
+}
 class VisualInsightSystem {
     constructor() {
         this.insights = [];

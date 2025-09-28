@@ -180,7 +180,7 @@ export class ImprovedVoiceAgent {
     this.queueMessage({
       type: 'instruction', 
       message: `Starting ${config.name}. ${config.voiceCues.formTips[0]} Remember to maintain control throughout the full range of motion.`,
-      priority: 'medium',
+      priority: 'low',
       timestamp: Date.now(),
       category: 'exercise_start'
     });
