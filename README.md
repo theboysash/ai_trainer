@@ -1,2 +1,1 @@
-npm install @mediapipe/tasks-vision react react-dom
-npm install -D @types/react @types/react-dom @vitejs/plugin-react typescript vite
+This may be the first project I've finished. This project got us 2nd place in the Wits AI hackathon. It makes use of pose detection through mediapipe, as well as Vapi for a vioice agent, and together they serve as a personalized AI trainer.
